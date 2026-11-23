@@ -156,7 +156,10 @@ jobs:
           if (-not (Test-Path (Join-Path $dest "bot-desktop.exe"))) { throw "bot-desktop.exe missing from the all-users install dir" }
           if (-not (Test-Path $key)) { throw "No machine-wide uninstall entry was written" }
           if (Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Praxi-Bot") { throw "A per-user entry was written for an all-users install" }
-          Start-Process -FilePath (Join-Path $dest "uninstall.exe") -ArgumentList "/S" -Wait
+          # An uninstaller started without _?= copies itself to %TEMP% and returns at once, so run it
+          # in place (_?= must be the last argument) to be able to check the result right away.
+          $u = Start-Process -FilePath (Join-Path $dest "uninstall.exe") -ArgumentList "/S", "_?=$dest" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "Silent all-users uninstall failed with exit code $($u.ExitCode)" }
           if (Test-Path $key) { throw "The machine-wide uninstall entry is still there after uninstalling" }
 
       - name: Upload installer artifact
