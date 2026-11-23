@@ -71,14 +71,14 @@
         "startMenuFolder": "Praxi-Bot",
         "languages": [
           "English",
-          "Turkish"
+          "Turkish",
+          "German"
         ],
-        "displayLanguageSelector": true,
+        "displayLanguageSelector": false,
         "compression": "lzma",
+        "installerTemplate": "nsis/installer.nsi",
         "installerHooks": "nsis/installer-hooks.nsh",
-        "installerIcon": "icons/icon.ico",
-        "headerImage": "nsis/header.bmp",
-        "sidebarImage": "nsis/sidebar.bmp"
+        "installerIcon": "icons/icon.ico"
       }
     }
   }

@@ -1,7 +1,15 @@
 name: Windows Installer
 
-# Deliberately NOT triggered on push/PR: a release build + NSIS bundle is slow.
+# Deliberately NOT triggered on every push/PR: a release build + NSIS bundle is slow. A pull
+# request that touches the installer itself does run it, because that build is the only thing
+# that compiles the NSIS script and starts the result (silent install and uninstall below).
 on:
+  pull_request:
+    paths:
+      - "apps/desktop/nsis/**"
+      - "apps/desktop/tauri.conf.json"
+      - "scripts/installer/**"
+      - ".github/workflows/installer.yml"
   workflow_dispatch:
   push:
     tags: ["v*"]
@@ -24,6 +32,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check the branded installer assets are current
+        shell: pwsh
+        run: python scripts/installer/generate_installer_assets.py --check
 
       - name: Check tagged release version
         if: github.ref_type == 'tag'
@@ -130,6 +142,22 @@ jobs:
 
           $un = Get-ChildItem $dest -Filter "uninstall*.exe" | Select-Object -First 1
           if ($un) { Start-Process -FilePath $un.FullName -ArgumentList "/S" -Wait }
+
+      # The "for everyone" install (the Advanced options choice) uses /ALLUSERS when run silently. The
+      # runner is an administrator, so this checks the machine-wide registration and its removal.
+      - name: Smoke test installer, for everyone (silent)
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          $dest = Join-Path $env:RUNNER_TEMP "praxibot-all-users"
+          $key = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Praxi-Bot"
+          $p = Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/ALLUSERS", "/D=$dest" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent all-users install failed with exit code $($p.ExitCode)" }
+          if (-not (Test-Path (Join-Path $dest "bot-desktop.exe"))) { throw "bot-desktop.exe missing from the all-users install dir" }
+          if (-not (Test-Path $key)) { throw "No machine-wide uninstall entry was written" }
+          if (Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Praxi-Bot") { throw "A per-user entry was written for an all-users install" }
+          Start-Process -FilePath (Join-Path $dest "uninstall.exe") -ArgumentList "/S" -Wait
+          if (Test-Path $key) { throw "The machine-wide uninstall entry is still there after uninstalling" }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

@@ -29,6 +29,7 @@ Start here, then pick the page for what you want to do. The top-level
 
 - [Maintaining: triage and merge guide](MAINTAINING.md)
 - [Releasing Praxi-Bot](releasing.md)
+- [The Windows installer: look, texts, preview and CI checks](installer.md)
 - [Reading CI timing reports](ci-report.md) and the [November 2026 findings](ci-report-2026-11.md)
 
 ## Related

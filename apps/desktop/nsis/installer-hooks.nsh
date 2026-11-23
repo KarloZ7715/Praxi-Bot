@@ -1,4 +1,7 @@
 ; Praxi-Bot NSIS installer hooks (Tauri v2)
+; Where this folder lives, for the branded pages that installer.nsi includes (praxi-ui.nsh, art/).
+!define PRAXI_NSIS_DIR "${__FILEDIR__}"
+
 ; - Per-user install (no administrator privileges required)
 ; - Start-menu shortcut managed by NSIS startMenuFolder = "Praxi-Bot"
 ; - Optional autostart toggle: off by default (can be enabled via /AUTOSTART=1 or from Settings in the app)

@@ -1,0 +1,248 @@
+{
+  "_comment": "Every text the branded installer shows. Edit here, then run: python scripts/installer/generate_installer_assets.py (it rewrites praxi-strings.nsh). $PxOldVer and ${VERSION} are filled in by the installer at run time. Do not use the ASCII double quote character in a value.",
+  "version_line": {
+    "en": "Version ${VERSION}",
+    "tr": "Sürüm ${VERSION}",
+    "de": "Version ${VERSION}"
+  },
+  "start_install_title": {
+    "en": "Install Praxi-Bot",
+    "tr": "Praxi-Bot'u yükle",
+    "de": "Praxi-Bot installieren"
+  },
+  "start_install_text": {
+    "en": "Praxi-Bot is your personal computer assistant. It runs on your own PC and asks you before it does anything important.",
+    "tr": "Praxi-Bot, kişisel bilgisayar asistanınızdır. Kendi bilgisayarınızda çalışır ve önemli bir şey yapmadan önce size sorar.",
+    "de": "Praxi-Bot ist dein persönlicher Computer-Assistent. Er läuft auf deinem eigenen PC und fragt dich, bevor er etwas Wichtiges tut."
+  },
+  "start_update_title": {
+    "en": "Update Praxi-Bot",
+    "tr": "Praxi-Bot'u güncelle",
+    "de": "Praxi-Bot aktualisieren"
+  },
+  "start_update_text": {
+    "en": "Version $PxOldVer is installed. This updates it to version ${VERSION}. Your chats and settings stay as they are.",
+    "tr": "Sürüm $PxOldVer yüklü. Bu işlem onu ${VERSION} sürümüne günceller. Sohbetleriniz ve ayarlarınız olduğu gibi kalır.",
+    "de": "Version $PxOldVer ist installiert. Sie wird auf Version ${VERSION} aktualisiert. Deine Chats und Einstellungen bleiben unverändert."
+  },
+  "start_same_title": {
+    "en": "Reinstall Praxi-Bot",
+    "tr": "Praxi-Bot'u yeniden yükle",
+    "de": "Praxi-Bot neu installieren"
+  },
+  "start_same_text": {
+    "en": "Version ${VERSION} is already installed. Reinstalling fixes missing or damaged files. Your chats and settings stay as they are.",
+    "tr": "Sürüm ${VERSION} zaten yüklü. Yeniden yükleme eksik veya bozuk dosyaları onarır. Sohbetleriniz ve ayarlarınız olduğu gibi kalır.",
+    "de": "Version ${VERSION} ist bereits installiert. Beim Neuinstallieren werden fehlende oder beschädigte Dateien repariert. Deine Chats und Einstellungen bleiben unverändert."
+  },
+  "start_newer_title": {
+    "en": "A newer version is already installed",
+    "tr": "Daha yeni bir sürüm zaten yüklü",
+    "de": "Eine neuere Version ist bereits installiert"
+  },
+  "start_newer_text": {
+    "en": "Version $PxOldVer is on this PC. This installer has the older version ${VERSION}, so nothing was changed.",
+    "tr": "Bu bilgisayarda $PxOldVer sürümü var. Bu yükleyici daha eski olan ${VERSION} sürümünü içeriyor, bu yüzden hiçbir şey değiştirilmedi.",
+    "de": "Auf diesem PC ist Version $PxOldVer installiert. Dieses Installationsprogramm enthält die ältere Version ${VERSION}, deshalb wurde nichts geändert."
+  },
+  "btn_install": {
+    "en": "Install",
+    "tr": "Yükle",
+    "de": "Installieren"
+  },
+  "btn_update": {
+    "en": "Update",
+    "tr": "Güncelle",
+    "de": "Aktualisieren"
+  },
+  "btn_reinstall": {
+    "en": "Reinstall",
+    "tr": "Yeniden yükle",
+    "de": "Neu installieren"
+  },
+  "btn_close": {
+    "en": "Close",
+    "tr": "Kapat",
+    "de": "Schließen"
+  },
+  "btn_cancel": {
+    "en": "Cancel",
+    "tr": "Vazgeç",
+    "de": "Abbrechen"
+  },
+  "btn_browse": {
+    "en": "Browse...",
+    "tr": "Gözat...",
+    "de": "Durchsuchen..."
+  },
+  "btn_launch": {
+    "en": "Launch Praxi-Bot",
+    "tr": "Praxi-Bot'u başlat",
+    "de": "Praxi-Bot starten"
+  },
+  "btn_uninstall": {
+    "en": "Uninstall",
+    "tr": "Kaldır",
+    "de": "Deinstallieren"
+  },
+  "advanced_link": {
+    "en": "Advanced options",
+    "tr": "Gelişmiş seçenekler",
+    "de": "Erweiterte Optionen"
+  },
+  "advanced_folder": {
+    "en": "Install folder",
+    "tr": "Yükleme klasörü",
+    "de": "Installationsordner"
+  },
+  "advanced_browse_title": {
+    "en": "Choose where to install Praxi-Bot",
+    "tr": "Praxi-Bot'un yükleneceği yeri seçin",
+    "de": "Wähle, wo Praxi-Bot installiert werden soll"
+  },
+  "advanced_just_me": {
+    "en": "Just for me (recommended, no administrator needed)",
+    "tr": "Sadece benim için (önerilir, yönetici izni gerekmez)",
+    "de": "Nur für mich (empfohlen, keine Administratorrechte nötig)"
+  },
+  "advanced_all_users": {
+    "en": "For everyone on this PC (asks for administrator permission)",
+    "tr": "Bu bilgisayardaki herkes için (yönetici izni ister)",
+    "de": "Für alle auf diesem PC (fragt nach Administratorrechten)"
+  },
+  "advanced_desktop": {
+    "en": "Add a shortcut to the desktop",
+    "tr": "Masaüstüne kısayol ekle",
+    "de": "Verknüpfung auf dem Desktop anlegen"
+  },
+  "elevate_failed": {
+    "en": "Administrator permission was not given, so nothing was installed for everyone. Choose “Just for me” or try again.",
+    "tr": "Yönetici izni verilmediği için herkes için hiçbir şey yüklenmedi. “Sadece benim için” seçeneğini seçin ya da yeniden deneyin.",
+    "de": "Die Administratorrechte wurden nicht erteilt, deshalb wurde nichts für alle Benutzer installiert. Wähle „Nur für mich“ oder versuche es erneut."
+  },
+  "silent_all_users_needs_admin": {
+    "en": "Installing for everyone needs an administrator. Run this installer from an administrator prompt, or leave out /ALLUSERS.",
+    "tr": "Herkes için yüklemek yönetici gerektirir. Bu yükleyiciyi yönetici olarak çalıştırın ya da /ALLUSERS seçeneğini kaldırın.",
+    "de": "Die Installation für alle Benutzer braucht Administratorrechte. Starte dieses Installationsprogramm als Administrator oder lasse /ALLUSERS weg."
+  },
+  "progress_install_title": {
+    "en": "Installing Praxi-Bot...",
+    "tr": "Praxi-Bot yükleniyor...",
+    "de": "Praxi-Bot wird installiert..."
+  },
+  "progress_update_title": {
+    "en": "Updating Praxi-Bot...",
+    "tr": "Praxi-Bot güncelleniyor...",
+    "de": "Praxi-Bot wird aktualisiert..."
+  },
+  "progress_note": {
+    "en": "This only takes a moment. Please keep this window open.",
+    "tr": "Bu yalnızca birkaç saniye sürer. Lütfen bu pencereyi açık tutun.",
+    "de": "Das dauert nur einen Moment. Bitte lass dieses Fenster geöffnet."
+  },
+  "status_prepare": {
+    "en": "Getting ready...",
+    "tr": "Hazırlanıyor...",
+    "de": "Vorbereitung..."
+  },
+  "status_removing_old": {
+    "en": "Removing the old version...",
+    "tr": "Eski sürüm kaldırılıyor...",
+    "de": "Die alte Version wird entfernt..."
+  },
+  "status_webview": {
+    "en": "Setting up the web component Praxi-Bot needs...",
+    "tr": "Praxi-Bot'un ihtiyaç duyduğu web bileşeni hazırlanıyor...",
+    "de": "Die benötigte Web-Komponente wird eingerichtet..."
+  },
+  "status_copy": {
+    "en": "Copying files...",
+    "tr": "Dosyalar kopyalanıyor...",
+    "de": "Dateien werden kopiert..."
+  },
+  "status_shortcuts": {
+    "en": "Adding shortcuts...",
+    "tr": "Kısayollar ekleniyor...",
+    "de": "Verknüpfungen werden angelegt..."
+  },
+  "status_finish": {
+    "en": "Finishing up...",
+    "tr": "Tamamlanıyor...",
+    "de": "Abschluss..."
+  },
+  "install_failed": {
+    "en": "Praxi-Bot could not be installed completely. Nothing else on your PC was changed. Please close other programs and run the installer again.",
+    "tr": "Praxi-Bot tam olarak yüklenemedi. Bilgisayarınızdaki başka hiçbir şey değiştirilmedi. Lütfen diğer programları kapatıp yükleyiciyi yeniden çalıştırın.",
+    "de": "Praxi-Bot konnte nicht vollständig installiert werden. Auf deinem PC wurde sonst nichts verändert. Bitte schließe andere Programme und starte das Installationsprogramm erneut."
+  },
+  "finish_install_title": {
+    "en": "Praxi-Bot is ready",
+    "tr": "Praxi-Bot hazır",
+    "de": "Praxi-Bot ist bereit"
+  },
+  "finish_update_title": {
+    "en": "Praxi-Bot is up to date",
+    "tr": "Praxi-Bot güncel",
+    "de": "Praxi-Bot ist aktuell"
+  },
+  "finish_text": {
+    "en": "You can open it any time from the Start menu.",
+    "tr": "Başlat menüsünden istediğiniz zaman açabilirsiniz.",
+    "de": "Du kannst es jederzeit über das Startmenü öffnen."
+  },
+  "un_title": {
+    "en": "Uninstall Praxi-Bot",
+    "tr": "Praxi-Bot'u kaldır",
+    "de": "Praxi-Bot deinstallieren"
+  },
+  "un_text": {
+    "en": "This removes Praxi-Bot from your PC. Your chats, memories and settings are kept unless you tick the box below.",
+    "tr": "Bu işlem Praxi-Bot'u bilgisayarınızdan kaldırır. Aşağıdaki kutuyu işaretlemezseniz sohbetleriniz, anılarınız ve ayarlarınız korunur.",
+    "de": "Dadurch wird Praxi-Bot von deinem PC entfernt. Deine Chats, Erinnerungen und Einstellungen bleiben erhalten, solange du das Kästchen unten nicht anhakst."
+  },
+  "un_delete_data": {
+    "en": "Also delete app data",
+    "tr": "Uygulama verilerini de sil",
+    "de": "Auch App-Daten löschen"
+  },
+  "un_delete_warning": {
+    "en": "Careful: this permanently deletes your chats, memories and settings from this PC. It cannot be undone.",
+    "tr": "Dikkat: Bu işlem sohbetlerinizi, anılarınızı ve ayarlarınızı bu bilgisayardan kalıcı olarak siler. Geri alınamaz.",
+    "de": "Achtung: Damit werden deine Chats, Erinnerungen und Einstellungen endgültig von diesem PC gelöscht. Das lässt sich nicht rückgängig machen."
+  },
+  "un_progress_title": {
+    "en": "Removing Praxi-Bot...",
+    "tr": "Praxi-Bot kaldırılıyor...",
+    "de": "Praxi-Bot wird entfernt..."
+  },
+  "un_status_files": {
+    "en": "Removing files...",
+    "tr": "Dosyalar siliniyor...",
+    "de": "Dateien werden entfernt..."
+  },
+  "un_status_data": {
+    "en": "Deleting app data...",
+    "tr": "Uygulama verileri siliniyor...",
+    "de": "App-Daten werden gelöscht..."
+  },
+  "un_done_title": {
+    "en": "Praxi-Bot was removed",
+    "tr": "Praxi-Bot kaldırıldı",
+    "de": "Praxi-Bot wurde entfernt"
+  },
+  "un_done_kept": {
+    "en": "Your chats and settings were kept on this PC.",
+    "tr": "Sohbetleriniz ve ayarlarınız bu bilgisayarda saklandı.",
+    "de": "Deine Chats und Einstellungen sind auf diesem PC geblieben."
+  },
+  "un_done_deleted": {
+    "en": "Your app data was deleted too.",
+    "tr": "Uygulama verileriniz de silindi.",
+    "de": "Deine App-Daten wurden ebenfalls gelöscht."
+  },
+  "un_failed": {
+    "en": "Praxi-Bot could not be removed completely. Please close it and try again.",
+    "tr": "Praxi-Bot tam olarak kaldırılamadı. Lütfen uygulamayı kapatıp yeniden deneyin.",
+    "de": "Praxi-Bot konnte nicht vollständig entfernt werden. Bitte schließe die App und versuche es erneut."
+  }
+}
