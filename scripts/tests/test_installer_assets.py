@@ -109,10 +109,10 @@ class InstallerAssetsTests(unittest.TestCase):
     def test_tauri_config_points_at_the_template_and_has_three_languages(self):
         config = json.loads((ROOT / "apps" / "desktop" / "tauri.conf.json").read_text(encoding="utf-8"))
         nsis = config["bundle"]["windows"]["nsis"]
-        self.assertEqual(nsis["installerTemplate"], "nsis/installer.nsi")
+        self.assertEqual(nsis["template"], "nsis/installer.nsi")
         self.assertEqual(nsis["languages"], ["English", "Turkish", "German"])
         self.assertEqual(nsis["installMode"], "currentUser")
-        for name in ("installerTemplate", "installerHooks"):
+        for name in ("template", "installerHooks"):
             self.assertTrue((ROOT / "apps" / "desktop" / nsis[name]).exists(), name)
 
 

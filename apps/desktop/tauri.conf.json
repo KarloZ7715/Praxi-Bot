@@ -76,7 +76,7 @@
         ],
         "displayLanguageSelector": false,
         "compression": "lzma",
-        "installerTemplate": "nsis/installer.nsi",
+        "template": "nsis/installer.nsi",
         "installerHooks": "nsis/installer-hooks.nsh",
         "installerIcon": "icons/icon.ico"
       }

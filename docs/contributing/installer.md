@@ -31,7 +31,7 @@ prompt).
 ## How it is built
 
 Tauri renders an NSIS script from a template and runs `makensis` (it downloads a pinned NSIS on its
-first bundle). We replace Tauri's template with our own through `bundle.windows.nsis.installerTemplate`.
+first bundle). We replace Tauri's template with our own through `bundle.windows.nsis.template`.
 No NSIS plug-in beyond what Tauri already ships is used, so the installer stays small (the pages add
 about 100 KB) and every licence stays as it was.
 
