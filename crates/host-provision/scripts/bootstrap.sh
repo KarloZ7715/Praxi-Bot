@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Praxi one-command server setup. The desktop app shows this text; the person
 # pastes it into the provider's web console (or any SSH session) on the server.
 # It runs as root and does four things, each printed as it happens:

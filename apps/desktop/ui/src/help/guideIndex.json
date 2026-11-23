@@ -654,12 +654,15 @@
     "doc": "servers.md",
     "title": "Adding a server",
     "headings": [
-      "Step 1: choose what fits you",
+      "The three choices",
+      "I have a server: one command",
+      "On the server (for administrators)",
+      "I need a server",
       "Oracle Cloud free tier, in short",
-      "Step 2: what Praxi needs",
-      "Step 3: checks, install, done",
+      "A rented server",
+      "A spare computer at home",
+      "Advanced: connect over SSH",
       "Your servers",
-      "Fixing common problems",
       "Limits today"
     ],
     "summary": "A server is another computer that stays on day and night, usually rented online. Your bots can live there, so they keep working when your own computer is off."
