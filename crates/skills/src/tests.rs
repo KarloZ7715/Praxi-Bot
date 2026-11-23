@@ -197,6 +197,7 @@ fn bundled_skills_all_valid() {
         "sign-in-forms",
         "linux-file-upload-dialog",
         "web-tables-and-spreadsheets",
+        "windows-save-as-dialog",
     ] {
         assert!(names.contains(&expected.to_string()), "missing {expected}");
     }
@@ -205,7 +206,10 @@ fn bundled_skills_all_valid() {
     for (dir_name, content) in bundled::BUNDLED {
         if matches!(
             *dir_name,
-            "sign-in-forms" | "linux-file-upload-dialog" | "web-tables-and-spreadsheets"
+            "sign-in-forms"
+                | "linux-file-upload-dialog"
+                | "web-tables-and-spreadsheets"
+                | "windows-save-as-dialog"
         ) {
             put(tmp.path(), dir_name, content);
             let report = hub::scan_dir(&tmp.path().join(dir_name)).unwrap();

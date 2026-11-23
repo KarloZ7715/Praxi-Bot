@@ -11,4 +11,5 @@ Each directory under `skills/` contains a `SKILL.md` playbook embedded into the 
 - `sign-in-forms` — Handle multi-step sign-in flows, SSO redirects, and 2FA prompts safely using stored fill secrets.
 - `web-tables-and-spreadsheets` — Navigate, read, and edit grid cells, paginated tables, and spreadsheet web apps reliably.
 - `windows-file-upload-dialog` — Handle the native Windows "Open" file picker that appears after clicking an upload button.
+- `windows-save-as-dialog` — Save to a requested path through the native Windows Save As dialog and handle overwrite prompts.
 - `windows-settings-navigation` — Open and navigate the Windows Settings app via ms-settings URIs and its accessibility tree.
