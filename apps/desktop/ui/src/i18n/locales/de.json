@@ -3279,12 +3279,14 @@
     "refusal": {
       "botPermissions": "Berechtigungen und Werkzeuge eines Bots werden auf {{name}} selbst verwaltet. Name, Persona und Modell können hier geändert werden.",
       "composio": "App-Verbindungen werden auf der Besitzerseite dieses Computers verwaltet, nicht auf {{name}}.",
+      "connectionTest": "Schlüsseltests laufen auf {{name}} selbst und sind in dieser App nicht möglich.",
       "credentials": "E-Mail- und Suchkonten werden auf {{name}} selbst verbunden.",
       "generic": "{{name}} hat das nicht erlaubt: {{reason}}",
       "hostTransfer": "Das Verschieben des Hosts und der Kopplungskanäle erfolgt auf {{name}} selbst.",
       "knowledge": "Wissenseinstellungen werden auf {{name}} selbst verwaltet.",
       "lifecycle": "Kopplung und Host-Updates erfolgen auf {{name}} selbst.",
       "localOnly": "Das kann nur die Person an {{name}} tun, nicht diese App.",
+      "localProviders": "Lokale Modelle und Programmier-Tools gehören zu dem Computer, auf dem der Bot läuft. Wechsle zu Dieser Computer, um sie einzurichten.",
       "overlay": "Nur die Person an {{name}} kann diese Aufforderung beantworten.",
       "ownerOnly": "Das kann nur auf {{name}} selbst erledigt werden.",
       "policy": "Die Ausführungsrichtlinie wird auf {{name}} selbst festgelegt, nicht über diese App.",
@@ -3314,6 +3316,8 @@
     "noModelKey": "{{name}} hat noch keinen Modellschlüssel. Du kannst seinen Bildschirm ansehen und seine Bots verwalten, aber Chats können erst beantwortet werden, wenn auf dem Host ein Schlüssel hinzugefügt wurde.",
     "notPaired": "{{name}} akzeptiert diesen Computer nicht mehr. Koppele erneut mit einem neuen Ticket.",
     "offline": "{{name}} antwortet nicht. Seine Bots laufen weiter; diese App verbindet sich von selbst neu.",
+    "updateApp": "Update nötig: Diese App ({{local}}) ist älter als {{name}} ({{host}}). Aktualisiere diese App, um {{name}} zu nutzen.",
+    "updateHost": "Update nötig: {{name}} ({{host}}) ist älter als diese App ({{local}}). Aktualisiere {{name}}, damit es zu dieser App passt.",
     "useThisComputer": "Diesen Computer verwenden",
     "versionBlocking": "Diese App ({{local}}) und {{name}} ({{host}}) haben unterschiedliche Versionen. Aktualisiere sie auf dieselbe Version, bevor du den Host verwendest.",
     "versionWarning": "Diese App hat {{local}} und {{name}} hat {{host}}: ein kleiner Unterschied, alles sollte funktionieren."
@@ -3487,6 +3491,15 @@
       "unknown": "der Bildschirm ist nicht verfügbar",
       "unsupported_platform": "diese Plattform hat keine Bildschirmaufnahme",
       "wayland": "Wayland-Sitzungen werden nicht unterstützt, verwende eine X11-Sitzung"
+    },
+    "noScreenFix": {
+      "addSession": "Auf dem Server gibt es noch keine Desktop-Sitzung. Füge sie hinzu, indem du dies auf dem Server ausführst, und öffne den Bildschirm dann erneut:",
+      "generic": "Meist hat der Server noch keine Desktop-Sitzung, sein Display antwortet nicht oder die Bildschirmfreigabe fehlt. So fügst du die Desktop-Sitzung hinzu, auf dem Server ausführen:",
+      "locked": "Entsperre die Sitzung auf dem Server und prüfe, ob die Bildschirmfreigabe erteilt ist, dann versuche es erneut.",
+      "platform": "Dieser Computer kann seinen Bildschirm nicht zeigen. Nutze einen Linux-Server mit Desktop-Sitzung oder einen Windows- oder macOS-Computer.",
+      "restart": "Starte den Praxi-Dienst auf dem Server neu und versuche es dann erneut.",
+      "wait": "Der Server prüft seinen Bildschirm noch. Warte ein paar Sekunden und aktualisiere.",
+      "wayland": "Stelle den Desktop des Servers auf eine X11-Sitzung um und öffne den Bildschirm dann erneut."
     },
     "noTargets": "Noch keine Bildschirmziele gemeldet.",
     "openScreen": "Bildschirm öffnen",
@@ -4687,10 +4700,12 @@
         "addTo": "Zu {{provider}} hinzufügen",
         "compatible": "OpenAI-kompatibler Server",
         "description": "Schlüssel werden im Schlüsselbund deines Systems gespeichert und nie wieder angezeigt.",
+        "hostDescription": "Der Schlüssel wird an {{name}} gesendet und dort gespeichert. Er bleibt nicht auf diesem Computer und wird nie wieder angezeigt.",
         "pasteLabel": "API-Schlüssel",
         "placeholder": "Füge einen Schlüssel ein. Wir erkennen den Anbieter.",
         "providers": "Anbieter",
         "saved": "Schlüssel für {{provider}} gespeichert",
+        "savedOn": "Schlüssel für {{provider}} auf {{name}} gespeichert",
         "stored": "Ein Schlüssel ist gespeichert",
         "title": "Mit API-Schlüssel hinzufügen",
         "unknown": "Wir können nicht erkennen, für welchen Anbieter dieser Schlüssel gilt. Wähle unten einen aus."
@@ -5421,6 +5436,10 @@
       "terminal": "Terminal",
       "wine": "Wein"
     }
+  },
+  "thisComputerOnly": {
+    "body": "Lokale Modelle laufen auf dem Computer, auf dem der Bot läuft. {{name}} ist ein Server, richte sie daher auf Diesem Computer ein.",
+    "switch": "Zu diesem Computer wechseln"
   },
   "tray": {
     "needs": "Braucht dich ({n})",

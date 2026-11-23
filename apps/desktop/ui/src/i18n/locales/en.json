@@ -3279,12 +3279,14 @@
     "refusal": {
       "botPermissions": "A bot's permissions and tools are managed on {{name}} itself. Name, persona and model can be changed here.",
       "composio": "App connections are managed on this computer's owner side, not on {{name}}.",
+      "connectionTest": "Key tests run on {{name}} itself and are not available from this app.",
       "credentials": "Email and search accounts are connected on {{name}} itself.",
       "generic": "{{name}} did not allow this: {{reason}}",
       "hostTransfer": "Moving the host and pairing channels is done on {{name}} itself.",
       "knowledge": "Knowledge settings are managed on {{name}} itself.",
       "lifecycle": "Pairing and host updates are done on {{name}} itself.",
       "localOnly": "Only the person at {{name}} can do this, not this app.",
+      "localProviders": "Local models and coding tools belong to the computer where the bot runs. Switch to This computer to set them up.",
       "overlay": "Only the person at {{name}} can answer that prompt.",
       "ownerOnly": "This can only be done on {{name}} itself.",
       "policy": "The execution policy is set on {{name}} itself, not from this app.",
@@ -3314,6 +3316,8 @@
     "noModelKey": "{{name}} has no model key yet. You can watch its screen and manage its bots, but chats cannot be answered until a key is added on the host.",
     "notPaired": "{{name}} no longer accepts this computer. Pair again with a new ticket.",
     "offline": "{{name}} is not answering. Its bots keep running; this app reconnects on its own.",
+    "updateApp": "Update needed: this app ({{local}}) is older than {{name}} ({{host}}). Update this app to use {{name}}.",
+    "updateHost": "Update needed: {{name}} ({{host}}) is older than this app ({{local}}). Update {{name}} to match this app.",
     "useThisComputer": "Use this computer",
     "versionBlocking": "This app ({{local}}) and {{name}} ({{host}}) are on different versions. Update them to the same version before using the host.",
     "versionWarning": "This app is {{local}} and {{name}} is {{host}}: a small difference, everything should work."
@@ -3487,6 +3491,15 @@
       "unknown": "the screen is not available",
       "unsupported_platform": "this platform has no screen capture",
       "wayland": "Wayland sessions are not supported, use an X11 session"
+    },
+    "noScreenFix": {
+      "addSession": "The server has no desktop session yet. Add it by running this on the server, then open the screen again:",
+      "generic": "Most often the server has no desktop session yet, its display does not answer, or the screen permission is missing. To add the desktop session run this on the server:",
+      "locked": "Unlock the session on the server and check that the screen permission is granted, then try again.",
+      "platform": "This computer cannot show its screen. Use a Linux server with a desktop session or a Windows or macOS computer.",
+      "restart": "Restart the Praxi service on the server, then try again.",
+      "wait": "The server is still checking its screen. Wait a few seconds and refresh.",
+      "wayland": "Switch the server's desktop to an X11 session, then open the screen again."
     },
     "noTargets": "No screen targets reported yet.",
     "openScreen": "Open screen",
@@ -4687,10 +4700,12 @@
         "addTo": "Add to {{provider}}",
         "compatible": "OpenAI-compatible server",
         "description": "Keys are stored in your system keychain and never shown again.",
+        "hostDescription": "The key is sent to {{name}} and stored there. It is not kept on this computer and never shown again.",
         "pasteLabel": "API key",
         "placeholder": "Paste a key. We recognise the provider.",
         "providers": "Provider",
         "saved": "Saved key for {{provider}}",
+        "savedOn": "Key for {{provider}} saved on {{name}}",
         "stored": "A key is stored",
         "title": "Add with an API key",
         "unknown": "We cannot tell which provider this key is for. Choose one below."
@@ -5421,6 +5436,10 @@
       "terminal": "Terminal",
       "wine": "Wine"
     }
+  },
+  "thisComputerOnly": {
+    "body": "Local models run on the computer where the bot runs. {{name}} is a server, so set them up on This computer.",
+    "switch": "Switch to this computer"
   },
   "tray": {
     "needs": "Needs you ({n})",

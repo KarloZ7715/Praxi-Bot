@@ -3279,12 +3279,14 @@
     "refusal": {
       "botPermissions": "Bir botun izinleri ve araçları {{name}} üzerinde yönetilir. Ad, kişilik ve model buradan değiştirilebilir.",
       "composio": "Uygulama bağlantıları {{name}} üzerinde değil, bu bilgisayarın sahibi tarafında yönetilir.",
+      "connectionTest": "Anahtar testleri {{name}} üzerinde çalışır, bu uygulamadan yapılamaz.",
       "credentials": "E-posta ve arama hesapları {{name}} üzerinde bağlanır.",
       "generic": "{{name}} buna izin vermedi: {{reason}}",
       "hostTransfer": "Sunucuyu taşıma ve kanal eşleştirme {{name}} üzerinde yapılır.",
       "knowledge": "Bilgi ayarları {{name}} üzerinde yönetilir.",
       "lifecycle": "Eşleştirme ve sunucu güncellemeleri {{name}} üzerinde yapılır.",
       "localOnly": "Bunu yalnızca {{name}} başındaki kişi yapabilir, bu uygulama yapamaz.",
+      "localProviders": "Yerel modeller ve kodlama araçları botun çalıştığı bilgisayara aittir. Kurmak için Bu bilgisayar'a geç.",
       "overlay": "Bu soruyu yalnızca {{name}} başındaki kişi yanıtlayabilir.",
       "ownerOnly": "Bu yalnızca {{name}} üzerinde yapılabilir.",
       "policy": "Çalıştırma politikası bu uygulamadan değil, {{name}} üzerinde ayarlanır.",
@@ -3314,6 +3316,8 @@
     "noModelKey": "{{name}} sunucusunda henüz model anahtarı yok. Ekranını izleyebilir ve botlarını yönetebilirsin; sunucuya bir anahtar eklenene kadar sohbetlere yanıt gelmez.",
     "notPaired": "{{name}} artık bu bilgisayarı kabul etmiyor. Yeni bir biletle yeniden eşleştir.",
     "offline": "{{name}} yanıt vermiyor. Botları çalışmaya devam eder; uygulama kendiliğinden yeniden bağlanır.",
+    "updateApp": "Güncelleme gerekli: bu uygulama ({{local}}), {{name}} ({{host}}) sunucusundan eski. {{name}} ile çalışmak için bu uygulamayı güncelle.",
+    "updateHost": "Güncelleme gerekli: {{name}} ({{host}}), bu uygulamadan ({{local}}) eski. {{name}} sunucusunu bu uygulamaya uyacak şekilde güncelle.",
     "useThisComputer": "Bu bilgisayarı kullan",
     "versionBlocking": "Bu uygulama ({{local}}) ile {{name}} ({{host}}) farklı sürümlerde. Sunucuyu kullanmadan önce ikisini aynı sürüme getir.",
     "versionWarning": "Uygulama {{local}}, {{name}} {{host}}: küçük bir fark, her şeyin çalışması beklenir."
@@ -3487,6 +3491,15 @@
       "unknown": "ekran kullanılamıyor",
       "unsupported_platform": "bu platformda ekran yakalama yok",
       "wayland": "Wayland oturumları desteklenmiyor, X11 oturumu kullan"
+    },
+    "noScreenFix": {
+      "addSession": "Sunucuda henüz bir masaüstü oturumu yok. Sunucuda şu komutu çalıştırarak ekle, sonra ekranı yeniden aç:",
+      "generic": "Çoğunlukla sunucuda henüz masaüstü oturumu yoktur, ekranı yanıt vermez ya da ekran izni eksiktir. Masaüstü oturumunu eklemek için sunucuda şunu çalıştır:",
+      "locked": "Sunucudaki oturumun kilidini aç ve ekran izninin verildiğini kontrol et, sonra yeniden dene.",
+      "platform": "Bu bilgisayar ekranını gösteremez. Masaüstü oturumu olan bir Linux sunucusu ya da Windows veya macOS bilgisayar kullan.",
+      "restart": "Sunucuda Praxi hizmetini yeniden başlat, sonra yeniden dene.",
+      "wait": "Sunucu ekranını hâlâ kontrol ediyor. Birkaç saniye bekleyip yenile.",
+      "wayland": "Sunucunun masaüstünü X11 oturumuna geçir, sonra ekranı yeniden aç."
     },
     "noTargets": "Henüz bildirilen bir ekran hedefi yok.",
     "openScreen": "Ekranı aç",
@@ -4687,10 +4700,12 @@
         "addTo": "{{provider}} için ekle",
         "compatible": "OpenAI uyumlu sunucu",
         "description": "Anahtarlar sistem anahtarlığında saklanır ve bir daha gösterilmez.",
+        "hostDescription": "Anahtar {{name}} sunucusuna gönderilir ve orada saklanır. Bu bilgisayarda tutulmaz ve bir daha gösterilmez.",
         "pasteLabel": "API anahtarı",
         "placeholder": "Anahtarı yapıştır. Sağlayıcıyı biz tanırız.",
         "providers": "Sağlayıcı",
         "saved": "{{provider}} anahtarı kaydedildi",
+        "savedOn": "{{provider}} anahtarı {{name}} üzerine kaydedildi",
         "stored": "Anahtar kayıtlı",
         "title": "API anahtarıyla ekle",
         "unknown": "Bu anahtarın hangi sağlayıcıya ait olduğunu anlayamadık. Aşağıdan birini seç."
@@ -5421,6 +5436,10 @@
       "terminal": "Terminal",
       "wine": "Şarap"
     }
+  },
+  "thisComputerOnly": {
+    "body": "Yerel modeller botun çalıştığı bilgisayarda çalışır. {{name}} bir sunucu, bu yüzden bunları Bu bilgisayar'da kur.",
+    "switch": "Bu bilgisayara geç"
   },
   "tray": {
     "needs": "Senden bekleyenler ({n})",
