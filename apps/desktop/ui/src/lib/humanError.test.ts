@@ -190,6 +190,11 @@ test("takeover and pause failures name their real reason, never the generic sent
       assert.notEqual(h, generic);
       assert.ok(h.length > 10);
     }
+    // A release conflict is not a takeover request conflict.
+    assert.notEqual(
+      layer.humanError({ status: 409, code: "conflict", message: "release request conflict" }).code,
+      "takeoverRequestConflict"
+    );
     // The unknown host refusal keeps the daemon's reason in the sentence.
     assert.match(layer.humanLine(cases[1][0]), /some brand new refusal/);
   }

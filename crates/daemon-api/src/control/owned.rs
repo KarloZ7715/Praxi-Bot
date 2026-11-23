@@ -602,7 +602,24 @@ impl ControlHub {
     /// # Errors
     /// Keeps the pause if the durable write fails.
     pub fn clear_owned_latch(&self) -> Result<Option<OwnedTakeover>, String> {
+        self.clear_owned_latch_if(|_, _| true)
+    }
+    /// Like [`Self::clear_owned_latch`], but decided under the same lock that
+    /// the clear happens under: `keep` sees the CURRENT takeover and the latch
+    /// is dropped only when it returns `true`. Anything that changed it since
+    /// the caller looked (a local Stop, a new takeover, pending work) is left
+    /// untouched and `Ok(None)` is returned.
+    /// # Errors
+    /// Keeps the pause if the durable write fails.
+    pub fn clear_owned_latch_if(
+        &self,
+        should_clear: impl FnOnce(&OwnedTakeover, (bool, bool)) -> bool,
+    ) -> Result<Option<OwnedTakeover>, String> {
         let mut st = self.state.lock();
+        let pending = (st.reset_pending, st.audit_pending);
+        if !st.owned.as_ref().is_some_and(|t| should_clear(t, pending)) {
+            return Ok(None);
+        }
         let Some(old) = st.owned.take() else {
             return Ok(None);
         };

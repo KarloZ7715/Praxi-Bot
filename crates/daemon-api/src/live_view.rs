@@ -17,7 +17,8 @@ use axum::{
 use live_view::{
     Codec, CreateSession, EffectiveProfile, FrameAck, Heartbeat, HumanAction, Profile, Reason,
     ReleaseRequest, SessionInfo, SessionUpdate, TakeoverAccepted, TakeoverRequest, TargetInfo,
-    TargetKind, TargetRegistry, TargetUnavailable, ViewError, ViewState, ViewTarget,
+    TargetKind, TargetRegistry, TargetUnavailable, UnavailableCode, ViewError, ViewState,
+    ViewTarget,
 };
 use parking_lot::Mutex;
 use std::{
@@ -482,7 +483,7 @@ pub(crate) async fn status(
     State(s): State<AppState>,
     Extension(actor): Extension<Actor>,
 ) -> Result<Json<live_view::ScreenStatus>, ApiError> {
-    use live_view::{ScreenStatus, ScreenStreamState as St, UnavailableCode};
+    use live_view::{ScreenStatus, ScreenStreamState as St};
     let live = s.live_view();
     if !live.allowed(&actor, false) {
         audit(
@@ -1530,6 +1531,29 @@ pub(crate) async fn local_recover(
     Ok(Json(crate::routes::control_state_dto(&s, Some(&actor))))
 }
 
+/// Longest the boot hook waits for this computer's screen probe to settle.
+const BOOT_PROBE_WAIT: Duration = Duration::from_secs(20);
+
+/// Is the restart latch still the stale one the boot hook looked at?
+fn is_stale_restart_latch(t: &OwnedTakeover, pending: (bool, bool)) -> bool {
+    t.info.state == ViewState::Paused
+        && t.info.reason == Some(Reason::Restart)
+        && t.info.input_expires_in_ms == 0
+        && pending == (false, false)
+}
+
+/// The desktop probe is settled once no screen is still being probed: a
+/// `starting` note, or a probe that timed out but may still answer late, means
+/// the screen may yet appear under the SAME stable id.
+fn screen_probe_settled(s: &AppState) -> bool {
+    !s.live_view().registry.unavailable().iter().any(|n| {
+        matches!(
+            n.code,
+            UnavailableCode::Starting | UnavailableCode::TimedOut
+        )
+    })
+}
+
 /// Daemon start: a takeover that a restart interrupted, whose screen is gone
 /// and which nobody can be typing into any more, must not keep the bot paused
 /// forever. Clears that latch (after the same safe steps as `local_recover`:
@@ -1537,18 +1561,43 @@ pub(crate) async fn local_recover(
 /// whether it did. A local override, a latch that still owes a key reset or an
 /// audit row, and a takeover whose screen still exists stay as they are: those
 /// need a human (`/v1/control/recover` or a new takeover by the same device).
+///
+/// The screen is registered off the start path with a stable id, so "absent"
+/// only means "gone" once the desktop probe has settled: the hook waits (bounded)
+/// for that, and if it never settles the latch is kept for explicit recovery.
+/// The clear itself is conditional under the hub lock: a local Stop or any
+/// other change made while the hook ran is never overwritten.
 pub async fn boot_recover_stale_takeover(s: &AppState) -> bool {
+    boot_recover_stale_takeover_within(s, BOOT_PROBE_WAIT).await
+}
+
+async fn boot_recover_stale_takeover_within(s: &AppState, probe_wait: Duration) -> bool {
     let live = s.live_view();
+    let stale = || {
+        s.hub().takeover().is_some_and(|t| {
+            is_stale_restart_latch(&t, s.hub().override_pending())
+                && live.registry.get(t.info.target_id).is_none()
+        })
+    };
+    if !stale() {
+        return false;
+    }
+    // Without the executor, so a Stop during this wait is never held up.
+    let deadline = tokio::time::Instant::now() + probe_wait;
+    while !screen_probe_settled(s) {
+        if tokio::time::Instant::now() >= deadline {
+            eprintln!(
+                "warning: the screen probe did not settle; the takeover latch kept                  (clear it with /v1/control/recover)"
+            );
+            return false;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
     let _executor = live.executor.lock().await;
     let Some(owned) = s.hub().takeover() else {
         return false;
     };
-    if owned.info.state != ViewState::Paused
-        || owned.info.reason != Some(Reason::Restart)
-        || owned.info.input_expires_in_ms != 0
-        || live.registry.get(owned.info.target_id).is_some()
-        || s.hub().override_pending() != (false, false)
-    {
+    if !stale() {
         return false;
     }
     let actor = Actor {
@@ -1563,17 +1612,22 @@ pub async fn boot_recover_stale_takeover(s: &AppState) -> bool {
             return false;
         }
     }
-    if audit(
-        s,
-        &actor,
-        "takeover.recovered",
-        serde_json::json!({"by":"boot","reason":"restart_stale","previous_owner":owned.actor}),
-    )
-    .is_err()
-    {
-        return false;
-    }
-    s.hub().clear_owned_latch().is_ok_and(|old| old.is_some())
+    // The registry is absent (checked above, settled probe); a sink cannot
+    // exist for an unregistered id, so there are no pressed keys to reset.
+    let id = owned.info.id;
+    let cleared = s.hub().clear_owned_latch_if(|t, pending| {
+        t.info.id == id
+            && is_stale_restart_latch(t, pending)
+            && live.registry.get(t.info.target_id).is_none()
+            && audit(
+                s,
+                &actor,
+                "takeover.recovered",
+                serde_json::json!({"by":"boot","reason":"restart_stale","previous_owner":owned.actor}),
+            )
+            .is_ok()
+    });
+    cleared.is_ok_and(|old| old.is_some())
 }
 
 /// `PUT /v1/view/privileges/{peer_key}`: the local user grants or revokes
