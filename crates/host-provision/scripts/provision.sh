@@ -81,6 +81,7 @@ cmd_preflight() {
   fi
   kv gh_version "$(gh_version || true)"
   kv praxi_version "$("${PREFIX}/bin/bot" --version 2>/dev/null | awk '{print $2}' || true)"
+  kv praxi_build "$("${PREFIX}/bin/bot" --version 2>/dev/null | awk '{print $3}' | tr -cd 'A-Za-z0-9.+_-' || true)"
   if [[ -f "${UNIT}" ]]; then kv unit_present 1; else kv unit_present 0; fi
   if unit_hostmode; then kv unit_hostmode 1; else kv unit_hostmode 0; fi
   kv unit_active "$(systemctl is-active praxi.service 2>/dev/null || true)"

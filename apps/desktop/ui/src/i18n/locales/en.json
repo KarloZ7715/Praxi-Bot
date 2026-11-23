@@ -5425,6 +5425,7 @@
   "updateServer": {
     "available": "Update available",
     "button": "Update server",
+    "buttonAnyway": "Update anyway",
     "checkAgain": "Check again",
     "checking": "Checking the server's version…",
     "commandsLabel": "Commands to run on the server",
@@ -5477,11 +5478,12 @@
     "manualNoSsh": "Praxi-Bot cannot log in to this server for you",
     "manualNote": "Your data is kept. Afterwards come back here and press Check again.",
     "manualTitle": "Run the update on the server yourself",
+    "newer": "Newer than this app",
     "noRelease": "This app does not know which release it came from, so it cannot name the exact version. Install the latest release from the Praxi-Bot guide (Linux server page) with the --update option.",
     "p1": "The server restarts for a few seconds.",
     "p2": "Bots running there pause for that moment and carry on afterwards.",
     "p3": "Your data, bots and settings are kept.",
-    "p4": "A copy of your data and of the previous version is kept on the server, so it can be put back.",
+    "p4": "The previous program files are kept on the server in /opt/praxi.backup-<time>, and your data is saved separately before the update, so both can be put back.",
     "p5": "Only the release that matches this app is installed, and Praxi-Bot checks its signature first. Nothing unchecked is ever run.",
     "progress": "Update progress",
     "retry": "Try again",
@@ -5526,6 +5528,7 @@
     "unknown": "Version unknown (the server may be off).",
     "upToDate": "Up to date",
     "versionLine": "Server version {{server}} · this app {{app}}",
+    "versionUnknown": "Exact version unknown (an older server)",
     "whatHappens": "What will happen"
   },
   "usage": {

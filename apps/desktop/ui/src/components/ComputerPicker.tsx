@@ -11,9 +11,8 @@ import { useDaemon } from "../state/DaemonContext";
 import { useLiveView } from "../state/LiveViewContext";
 import { useServerTerminal } from "../state/ServerTerminalContext";
 import { useServerVersions } from "../state/useServerVersions";
-import { serverIsOlder } from "../lib/serverUpdate";
 import { UpdateServerModal } from "./UpdateServerModal";
-import { VersionLine } from "./ServersModal";
+import { stateOf, VersionLine } from "./ServersModal";
 import styles from "./ComputerPicker.module.css";
 import { AddServerModal } from "./AddServerModal";
 import { ServersModal } from "./ServersModal";
@@ -88,7 +87,10 @@ export function ComputerPicker() {
   const homeId = home.kind === "host" ? home.hostId : "";
   const { versions, recheck } = useServerVersions(isMockMode() ? client : localApi, homeId ? [homeId] : [], open && place === "server" && status === "online");
   const homeVersion = versions[homeId];
-  const homeOlder = homeVersion?.state === "known" && serverIsOlder(homeVersion.version, hostList?.local_version);
+  const appBuild = { version: hostList?.local_version ?? "", releaseTag: hostList?.local_release_tag ?? null };
+  const homeState = stateOf(homeVersion, appBuild);
+  const homeOlder = homeState === "older";
+  const homeUnknown = homeState === "unknown";
 
   const nameOf = (p: RunPlace) => (p === "server" ? serverName : t("runLocation.thisComputer"));
 
@@ -256,7 +258,7 @@ export function ComputerPicker() {
               ? item("home-terminal", <Terminal aria-hidden="true" className={styles.icon} />, t("home.menu.terminal"), () => serverTerminal.open())
               : null}
             <div className={styles.section} data-testid="home-version" aria-live="polite">
-              <VersionLine v={homeVersion} app={hostList?.local_version ?? ""} />
+              <VersionLine v={homeVersion} app={appBuild} />
               <button type="button" className={styles.item} onClick={recheck} data-testid="home-version-recheck">
                 <RefreshCw aria-hidden="true" className={styles.icon} />
                 <span className={styles.itemText}>
@@ -264,10 +266,14 @@ export function ComputerPicker() {
                 </span>
               </button>
             </div>
-            {homeOlder
-              ? item("home-update", <RefreshCw aria-hidden="true" className={styles.icon} />, t("updateServer.button"), () => setUpdateHost(homeId), {
-                  hint: t("updateServer.available")
-                })
+            {homeOlder || homeUnknown
+              ? item(
+                  "home-update",
+                  <RefreshCw aria-hidden="true" className={styles.icon} />,
+                  t(homeOlder ? "updateServer.button" : "updateServer.buttonAnyway"),
+                  () => setUpdateHost(homeId),
+                  { hint: t(homeOlder ? "updateServer.available" : "updateServer.versionUnknown") }
+                )
               : null}
             {item("home-sync", <RefreshCw aria-hidden="true" className={styles.icon} />, t("homeMenu.sync"), () => setSyncHost(home.hostId), {
               hint: syncedAt === null ? undefined : t("homeMenu.lastSync", { when: syncWhen(syncedAt) })

@@ -217,6 +217,14 @@ impl HostSetup for CliHostSetup {
                     "no saved login details for this server on this computer".into(),
                 )
             })?;
+        // The stored file is plain JSON on disk: re-check every field that reaches ssh's argv.
+        let mut record = record;
+        validate::host(&record.host).map_err(invalid)?;
+        validate::user(&record.user).map_err(invalid)?;
+        validate::port(u32::from(record.port)).map_err(invalid)?;
+        if let Some(key) = record.key_path.take() {
+            record.key_path = Some(validate::key_path(&key).map_err(invalid)?);
+        }
         self.launch(record, Mode::Upgrade, HostJobKind::Update)
     }
 

@@ -19051,6 +19051,10 @@
           "arch": {
             "type": "string"
           },
+          "build_id": {
+            "type": "string",
+            "description": "Identifies this exact build (the release tag, else `<version>+g<hash>`)."
+          },
           "endpoint_id": {
             "type": [
               "string",
@@ -19092,6 +19096,13 @@
               "null"
             ]
           },
+          "release_tag": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Release tag this server was built from (`v0.1.0-alpha.3`); absent for untagged builds."
+          },
           "state": {
             "$ref": "#/components/schemas/HostState"
           },
@@ -19115,6 +19126,17 @@
         "properties": {
           "api_version": {
             "type": "string"
+          },
+          "build_id": {
+            "type": "string",
+            "description": "The server's exact build id; empty for servers that predate it."
+          },
+          "release_tag": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Release tag the server was built from; absent for untagged builds and old servers."
           },
           "version": {
             "type": "string"

@@ -5425,6 +5425,7 @@
   "updateServer": {
     "available": "Güncelleme var",
     "button": "Sunucuyu güncelle",
+    "buttonAnyway": "Yine de güncelle",
     "checkAgain": "Yeniden kontrol et",
     "checking": "Sunucunun sürümüne bakılıyor…",
     "commandsLabel": "Sunucuda çalıştırılacak komutlar",
@@ -5477,11 +5478,12 @@
     "manualNoSsh": "Praxi-Bot senin yerine bu sunucuya giriş yapamıyor",
     "manualNote": "Verilerin korunur. Sonra buraya dön ve Yeniden kontrol et'e bas.",
     "manualTitle": "Güncellemeyi sunucuda kendin çalıştır",
+    "newer": "Bu uygulamadan daha yeni",
     "noRelease": "Bu uygulama hangi sürümden geldiğini bilmiyor, bu yüzden tam sürümü söyleyemez. Praxi-Bot rehberindeki (Linux sunucu sayfası) son sürümü --update seçeneğiyle kur.",
     "p1": "Sunucu birkaç saniyeliğine yeniden başlar.",
     "p2": "Orada çalışan botlar o an duraklar, sonra kaldığı yerden devam eder.",
     "p3": "Verilerin, botların ve ayarların korunur.",
-    "p4": "Verilerinin ve önceki sürümün bir kopyası sunucuda saklanır; gerekirse geri konabilir.",
+    "p4": "Önceki program dosyaları sunucuda /opt/praxi.backup-<zaman> klasöründe saklanır; verilerin de güncellemeden önce ayrıca yedeklenir. İkisi de geri konabilir.",
     "p5": "Yalnızca bu uygulamayla eşleşen sürüm kurulur ve Praxi-Bot önce imzasını doğrular. Doğrulanmamış hiçbir şey çalıştırılmaz.",
     "progress": "Güncelleme ilerlemesi",
     "retry": "Yeniden dene",
@@ -5526,6 +5528,7 @@
     "unknown": "Sürüm bilinmiyor (sunucu kapalı olabilir).",
     "upToDate": "Güncel",
     "versionLine": "Sunucu sürümü {{server}} · bu uygulama {{app}}",
+    "versionUnknown": "Tam sürüm bilinmiyor (eski bir sunucu)",
     "whatHappens": "Neler olacak"
   },
   "usage": {

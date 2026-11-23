@@ -37,11 +37,39 @@ function comparePre(a: string, b: string): number {
 export function serverIsOlder(server: string | null | undefined, app: string | null | undefined): boolean {
   const s = server ? parse(server) : null;
   const a = app ? parse(app) : null;
-  if (!s || !a) return false;
+  return s !== null && a !== null && compareParsed(s, a) < 0;
+}
+
+function compareParsed(s: { core: number[]; pre: string }, a: { core: number[]; pre: string }): number {
   for (let i = 0; i < 3; i += 1) {
-    if (s.core[i] !== a.core[i]) return s.core[i] < a.core[i];
+    if (s.core[i] !== a.core[i]) return s.core[i] < a.core[i] ? -1 : 1;
   }
-  return comparePre(s.pre, a.pre) < 0;
+  return comparePre(s.pre, a.pre);
+}
+
+export type UpdateState = "older" | "current" | "newer" | "unknown";
+
+/**
+ * Where a server stands against this app. Every published build reports the same cargo version
+ * (`0.1.0`), so once the app knows its release tag the SERVER's tag decides: a different older tag
+ * is "older", the same tag is "current", and a server that reports no tag is "unknown", never
+ * "current". Without an app tag (local build) only the version numbers can be compared.
+ */
+export function updateState(
+  server: { version: string; releaseTag?: string | null },
+  app: { version: string | null | undefined; releaseTag?: string | null }
+): UpdateState {
+  if (serverIsOlder(server.version, app.version)) return "older";
+  const sv = server.version ? parse(server.version) : null;
+  const av = app.version ? parse(app.version) : null;
+  if (sv && av && compareParsed(sv, av) > 0) return "newer";
+  if (!app.releaseTag) return sv && av ? "current" : "unknown";
+  if (!server.releaseTag) return "unknown";
+  const st = parse(server.releaseTag);
+  const at = parse(app.releaseTag);
+  if (!st || !at) return "unknown";
+  const c = compareParsed(st, at);
+  return c < 0 ? "older" : c > 0 ? "newer" : "current";
 }
 
 /** The progress rows, in order. The installer does download, check, install and restart as one verified run. */

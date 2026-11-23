@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HostSetupJob, HostSetupStep } from "../api/types";
-import { rowStates, serverIsOlder, updateCommands, updateFailure } from "./serverUpdate.ts";
+import { rowStates, serverIsOlder, updateCommands, updateFailure, updateState } from "./serverUpdate.ts";
 
 const step = (id: string, status: HostSetupStep["status"], detail = ""): HostSetupStep => ({ id, title: id, status, detail, hint: null });
 const job = (state: HostSetupJob["state"], steps: HostSetupStep[]) => ({ state, steps });
@@ -45,4 +45,13 @@ test("copy-paste commands pin the verified bootstrap to the app's own release an
   assert.match(text, /--update --version "\$version"/);
   assert.equal(updateCommands("v1.0.0; rm -rf /"), null);
   assert.equal(updateCommands(null), null);
+});
+
+test("the release tag decides when every build reports the same cargo version", () => {
+  const app = { version: "0.1.0", releaseTag: "v0.1.0-alpha.4" };
+  assert.equal(updateState({ version: "0.1.0", releaseTag: "v0.1.0-alpha.3" }, app), "older");
+  assert.equal(updateState({ version: "0.1.0", releaseTag: "v0.1.0-alpha.4" }, app), "current");
+  assert.equal(updateState({ version: "0.1.0", releaseTag: "v0.1.0-alpha.5" }, app), "newer");
+  assert.equal(updateState({ version: "0.1.0", releaseTag: null }, app), "unknown", "never claim up to date without a tag");
+  assert.equal(updateState({ version: "0.1.0" }, { version: "0.1.0", releaseTag: null }), "current", "local build: versions only");
 });

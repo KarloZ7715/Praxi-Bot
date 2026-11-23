@@ -5981,6 +5981,8 @@ export interface components {
         HostStatus: {
             api_version: string;
             arch: string;
+            /** @description Identifies this exact build (the release tag, else `<version>+g<hash>`). */
+            build_id?: string;
             endpoint_id?: string | null;
             /** Format: int64 */
             epoch: number;
@@ -5991,6 +5993,8 @@ export interface components {
             os: string;
             peers: components["schemas"]["HostPeer"][];
             relay_url?: string | null;
+            /** @description Release tag this server was built from (`v0.1.0-alpha.3`); absent for untagged builds. */
+            release_tag?: string | null;
             state: components["schemas"]["HostState"];
             /** Format: int64 */
             total_ram_mb: number;
@@ -5999,6 +6003,10 @@ export interface components {
         /** @description `GET /v1/hosts/{id}/version`: what a paired server runs. */
         HostVersion: {
             api_version: string;
+            /** @description The server's exact build id; empty for servers that predate it. */
+            build_id?: string;
+            /** @description Release tag the server was built from; absent for untagged builds and old servers. */
+            release_tag?: string | null;
             version: string;
         };
         /** @description One scan finding. The text never contains a matched secret. */

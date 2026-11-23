@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ApiClient } from "../api/client";
 
 /** What this computer knows about one server's version: a number, "asking", or "could not ask". */
-export type ServerVersion = { state: "loading" } | { state: "known"; version: string } | { state: "unknown" };
+export type ServerVersion = { state: "loading" } | { state: "known"; version: string; releaseTag: string | null } | { state: "unknown" };
 
 /**
  * The versions of the given servers, asked one after the other (a server that is off simply stays
@@ -25,7 +25,8 @@ export function useServerVersions(
       for (const id of ids) {
         let next: ServerVersion;
         try {
-          next = { state: "known", version: (await api.getHostVersion(id)).version };
+          const got = await api.getHostVersion(id);
+          next = { state: "known", version: got.version, releaseTag: got.release_tag ?? null };
         } catch {
           next = { state: "unknown" };
         }

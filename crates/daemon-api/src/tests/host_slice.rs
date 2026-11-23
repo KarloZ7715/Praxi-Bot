@@ -504,6 +504,17 @@ async fn host_link_routes_work_for_the_local_user_and_keep_secrets_out_of_the_au
     assert_eq!(r.status, StatusCode::OK);
     assert_eq!(r.json()["hosts"], json!([]));
     assert_eq!(r.json()["local_version"], env!("CARGO_PKG_VERSION"));
+    // /v1/host names the exact build, not just the cargo version every alpha shares.
+    let r2 = call(&t, Method::GET, "/v1/host", None).await;
+    assert_eq!(r2.status, StatusCode::OK);
+    assert_eq!(r2.json()["build_id"], crate::build_id());
+    assert!(
+        r2.json()["build_id"]
+            .as_str()
+            .is_some_and(|b| b.starts_with(env!("CARGO_PKG_VERSION")) || b.starts_with('v')),
+        "{}",
+        r2.json()
+    );
     let r = call(
         &t,
         Method::POST,

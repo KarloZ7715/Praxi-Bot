@@ -130,6 +130,33 @@ pub const DEFAULT_PORT: u16 = 47821;
 /// HTTP API compatibility version advertised by health and host status.
 pub const API_VERSION: &str = "1.0";
 
+/// Release tag this binary was built from (`v0.1.0-alpha.3`), set at build time by the
+/// release workflows through `PRAXI_RELEASE_TAG`; `None` for local builds.
+#[must_use]
+pub fn release_tag() -> Option<&'static str> {
+    option_env!("PRAXI_RELEASE_TAG").filter(|t| !t.is_empty())
+}
+
+/// Identifies this exact build: the release tag, else `<cargo version>+g<git hash>`
+/// (just the cargo version when the build had no git checkout).
+#[must_use]
+pub fn build_id() -> &'static str {
+    static ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    ID.get_or_init(|| match (release_tag(), option_env!("PRAXI_BUILD_HASH")) {
+        (Some(tag), _) => tag.to_owned(),
+        (None, Some(hash)) => format!("{}+g{hash}", env!("CARGO_PKG_VERSION")),
+        (None, None) => env!("CARGO_PKG_VERSION").to_owned(),
+    })
+}
+
+/// `bot --version` text after the program name: `0.1.0 v0.1.0-alpha.3`. The second word is
+/// read by the server preflight, so keep it a single token.
+#[must_use]
+pub fn version_line() -> &'static str {
+    static LINE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    LINE.get_or_init(|| format!("{} {}", env!("CARGO_PKG_VERSION"), build_id()))
+}
+
 /// Origins of the desktop app (Tauri, per platform) accepted by default.
 pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "tauri://localhost",

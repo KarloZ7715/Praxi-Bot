@@ -192,6 +192,18 @@ fn run_with(
     mode: Mode,
     allow_install: bool,
 ) -> Report {
+    run_full(dir, fake, local, ui, mode, allow_install, None)
+}
+
+fn run_full(
+    dir: &std::path::Path,
+    fake: &Fake,
+    local: &Local,
+    ui: &mut TestUi,
+    mode: Mode,
+    allow_install: bool,
+    release_tag: Option<&str>,
+) -> Report {
     let store = Store::new(dir.join("hosts"));
     let kh = KnownHosts::new(store.known_hosts_path());
     let record = store.load("oracle").unwrap_or_else(record);
@@ -205,7 +217,7 @@ fn run_with(
             record,
             mode,
             app_version: "0.1.0".into(),
-            release_tag: None,
+            release_tag: release_tag.map(str::to_owned),
             desktop: true,
             retry_delay: Duration::ZERO,
             allow_install,
@@ -661,5 +673,71 @@ fn upgrade_of_an_unreachable_server_fails_at_connect() {
     fake.fail.borrow_mut().insert("", 255);
     let r = run(dir.path(), &fake, &local, &mut ui, Mode::Upgrade);
     assert!(!r.ok());
+    assert!(!fake.ran(RemoteCmd::Provision(Sub::Install)));
+}
+
+fn tagged_server(tag: &str) -> String {
+    installed_facts().replace(
+        "unit_present=1",
+        &format!(
+            "praxi_build={tag}
+unit_present=1"
+        ),
+    )
+}
+
+fn run_upgrade_with_tag(server: String, app_tag: &str) -> (Report, Fake) {
+    let dir = tempfile::tempdir().unwrap();
+    let (fake, mut ui) = (Fake::new(), upgrade_ui());
+    let local = paired_record(dir.path());
+    fake.desktops.borrow_mut().push("deskkey1".into());
+    *fake.preflight.borrow_mut() = server;
+    let r = run_full(
+        dir.path(),
+        &fake,
+        &local,
+        &mut ui,
+        Mode::Upgrade,
+        true,
+        Some(app_tag),
+    );
+    (r, fake)
+}
+
+#[test]
+fn upgrade_installs_when_only_the_alpha_differs() {
+    // Same cargo version 0.1.0, server alpha.3, app alpha.4: the install must run.
+    let (r, fake) = run_upgrade_with_tag(tagged_server("v0.1.0-alpha.3"), "v0.1.0-alpha.4");
+    assert_eq!(status_of(&r, "install.run"), Status::Pass, "{}", r.table());
+    let calls = fake.calls.borrow();
+    let install = calls
+        .iter()
+        .find(|(c, _)| *c == RemoteCmd::Provision(Sub::Install))
+        .unwrap();
+    assert!(
+        install.1.contains("version=v0.1.0-alpha.4"),
+        "{}",
+        install.1
+    );
+}
+
+#[test]
+fn upgrade_installs_when_the_server_reports_no_build() {
+    let (r, fake) = run_upgrade_with_tag(installed_facts(), "v0.1.0-alpha.4");
+    assert_eq!(status_of(&r, "install.run"), Status::Pass, "{}", r.table());
+    assert!(fake.ran(RemoteCmd::Provision(Sub::Install)));
+}
+
+#[test]
+fn upgrade_skips_the_install_on_exactly_the_same_tag() {
+    let (r, fake) = run_upgrade_with_tag(tagged_server("v0.1.0-alpha.4"), "v0.1.0-alpha.4");
+    assert_eq!(status_of(&r, "install"), Status::Skip, "{}", r.table());
+    assert!(!fake.ran(RemoteCmd::Provision(Sub::Install)));
+}
+
+#[test]
+fn upgrade_refuses_a_server_with_a_newer_tag() {
+    let (r, fake) = run_upgrade_with_tag(tagged_server("v0.1.0-alpha.5"), "v0.1.0-alpha.4");
+    assert_eq!(status_of(&r, "install"), Status::Warn, "{}", r.table());
     assert!(!fake.ran(RemoteCmd::Provision(Sub::Install)));
 }

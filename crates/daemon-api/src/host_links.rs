@@ -84,6 +84,12 @@ pub struct HostLinkList {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct HostVersion {
     pub version: String,
+    /// Release tag the server was built from; absent for untagged builds and old servers.
+    #[serde(default)]
+    pub release_tag: Option<String>,
+    /// The server's exact build id; empty for servers that predate it.
+    #[serde(default)]
+    pub build_id: String,
     pub api_version: String,
 }
 
@@ -219,9 +225,7 @@ pub(crate) async fn list(State(s): State<AppState>) -> Json<HostLinkList> {
     Json(HostLinkList {
         local_version: env!("CARGO_PKG_VERSION").into(),
         local_api_version: crate::API_VERSION.into(),
-        local_release_tag: option_env!("PRAXI_RELEASE_TAG")
-            .filter(|t| !t.is_empty())
-            .map(str::to_owned),
+        local_release_tag: crate::release_tag().map(str::to_owned),
         hosts: s.host_links().map(|l| l.list()).unwrap_or_default(),
     })
 }
@@ -250,6 +254,8 @@ pub(crate) async fn host_version(
     match (call.status, text("version")) {
         (200, Some(version)) => Ok(Json(HostVersion {
             version,
+            release_tag: text("release_tag").filter(|t| !t.is_empty()),
+            build_id: text("build_id").unwrap_or_default(),
             api_version: text("api_version").unwrap_or_default(),
         })),
         _ => Err(ApiError::new(
