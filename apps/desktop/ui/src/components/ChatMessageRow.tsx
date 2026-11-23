@@ -16,7 +16,7 @@ import { MessageInfo } from "./MessageInfo";
 import { MessageTime } from "./MessageTime";
 import { EditMessage } from "./ResendTurn";
 import { SpeakButton } from "./SpeakButton";
-import { UserBubble } from "./UserBubble";
+import { FoldedBody, UserBubble } from "./UserBubble";
 import styles from "../views/ChatView.module.css";
 import msgStyles from "./MessageActions.module.css";
 
@@ -78,7 +78,9 @@ export const AssistantMessageRow = memo(function AssistantMessageRow({
             <span className={styles.authorLabel}>{gv.name}</span>
           </span>
         ) : null}
-        <Markdown text={text} />
+        <FoldedBody text={text} className={styles.foldBody} answer>
+          <Markdown text={text} />
+        </FoldedBody>
       </div>
       <MessageActions side="bot" meta={<MessageTime ts={ts} mode={times} />}>
         <CopyButton text={text} />
