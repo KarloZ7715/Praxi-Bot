@@ -26,10 +26,12 @@ when:
     `desktop_list_apps` again to check for a confirmation or error window.
     If Save As stays open, read its current tree with `desktop_get_state` to
     check for a message in the dialog itself.
-4. At an overwrite prompt, choose **No** or **Cancel**, report which file
-    already exists, and stop. Resume only after the user authorizes replacing
-    that file or chooses a different path. If saving fails or the dialog stays
-    open, report what the app shows and stop.
+4. At an overwrite prompt, choose **Yes** only if the user explicitly
+    authorized replacing that exact file. Otherwise choose **No** or
+    **Cancel**, report which file already exists, and stop until the user
+    authorizes replacement or chooses a different path. If saving fails or
+    the dialog stays open after confirmation, report what the app shows and
+    stop.
 5. Once Save As closes without an error, verify the file at the requested
     path, including its final extension, with `fs_list` on the destination
     folder or the source app's saved-file path.
