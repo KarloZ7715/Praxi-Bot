@@ -1115,19 +1115,24 @@ pub(crate) async fn takeover(
         && (old.info.state == ViewState::Paused
             || (old.info.state == ViewState::Active && old.info.input_expires_in_ms == 0))
     {
-        let allowed = (old.actor == actor.key
-            && (i.reacquire_takeover_id == Some(old.info.id) || old.info.target_id == target))
+        let allowed = old.retakeable_by(&actor.key, i.reacquire_takeover_id, target)
             || (actor.recovery && i.recover && i.reason.is_some());
         if !allowed {
             return Err(ApiError::conflict(
                 "explicit reacquisition/recovery required",
             ));
         }
-        if live.registry.get(old.info.target_id).is_none() {
+        // After a restart the old target belonged to the previous process:
+        // there is nothing left to reset, so a missing one is not an error.
+        let restarted = old.info.reason == Some(Reason::Restart);
+        if !restarted && live.registry.get(old.info.target_id).is_none() {
             return Err(ApiError::unavailable("old target reset cannot be verified"));
         }
     }
-    if i.recover || i.reacquire_takeover_id.is_some() {
+    let restart_latch = s.hub().takeover().is_some_and(|t| {
+        t.info.state == ViewState::Paused && t.info.reason == Some(Reason::Restart)
+    });
+    if i.recover || i.reacquire_takeover_id.is_some() || restart_latch {
         for mut journal in s.hub().pending_release_notes() {
             flush_note(&s, &mut journal)?;
         }
@@ -1523,6 +1528,52 @@ pub(crate) async fn local_recover(
         .map_err(ApiError::unavailable)?
         .ok_or_else(|| ApiError::conflict("no takeover is recorded"))?;
     Ok(Json(crate::routes::control_state_dto(&s, Some(&actor))))
+}
+
+/// Daemon start: a takeover that a restart interrupted, whose screen is gone
+/// and which nobody can be typing into any more, must not keep the bot paused
+/// forever. Clears that latch (after the same safe steps as `local_recover`:
+/// owed notes flushed first, one audit row, a fresh observation) and returns
+/// whether it did. A local override, a latch that still owes a key reset or an
+/// audit row, and a takeover whose screen still exists stay as they are: those
+/// need a human (`/v1/control/recover` or a new takeover by the same device).
+pub async fn boot_recover_stale_takeover(s: &AppState) -> bool {
+    let live = s.live_view();
+    let _executor = live.executor.lock().await;
+    let Some(owned) = s.hub().takeover() else {
+        return false;
+    };
+    if owned.info.state != ViewState::Paused
+        || owned.info.reason != Some(Reason::Restart)
+        || owned.info.input_expires_in_ms != 0
+        || live.registry.get(owned.info.target_id).is_some()
+        || s.hub().override_pending() != (false, false)
+    {
+        return false;
+    }
+    let actor = Actor {
+        key: "boot".to_owned(),
+        recovery: false,
+        local: false,
+        admin: false,
+        decisions: false,
+    };
+    for mut journal in s.hub().pending_release_notes() {
+        if flush_note(s, &mut journal).is_err() {
+            return false;
+        }
+    }
+    if audit(
+        s,
+        &actor,
+        "takeover.recovered",
+        serde_json::json!({"by":"boot","reason":"restart_stale","previous_owner":owned.actor}),
+    )
+    .is_err()
+    {
+        return false;
+    }
+    s.hub().clear_owned_latch().is_ok_and(|old| old.is_some())
 }
 
 /// `PUT /v1/view/privileges/{peer_key}`: the local user grants or revokes

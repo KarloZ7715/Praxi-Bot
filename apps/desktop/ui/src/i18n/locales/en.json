@@ -2905,6 +2905,18 @@
       "retry": "Try again",
       "waited": "Waiting for {{seconds}} s"
     },
+    "takeoverAlreadyOwned": {
+      "hint": "Wait until that device lets go, or clear its pause first if you are the owner of this computer.",
+      "title": "Another device already controls this screen"
+    },
+    "takeoverRecoveryRequired": {
+      "hint": "The server restarted (or the connection dropped) while a screen takeover was open. Press \"Clear pause\" at the top of the window to continue.",
+      "title": "A screen takeover is still open on the server"
+    },
+    "takeoverRequestConflict": {
+      "hint": "Another takeover request with the same number is already known to the server. Close the live view, open it again and retry.",
+      "title": "This takeover request clashes with an earlier one"
+    },
     "timeout": {
       "hint": "Check your connection and try again.",
       "title": "That took too long"

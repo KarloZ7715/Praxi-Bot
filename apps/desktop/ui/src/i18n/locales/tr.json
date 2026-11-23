@@ -2905,6 +2905,18 @@
       "retry": "Yeniden dene",
       "waited": "{{seconds}} sn'dir bekleniyor"
     },
+    "takeoverAlreadyOwned": {
+      "hint": "O cihaz bırakana kadar bekle; bu bilgisayarın sahibiysen önce onun duraklatmasını kaldır.",
+      "title": "Bu ekranı başka bir cihaz kontrol ediyor"
+    },
+    "takeoverRecoveryRequired": {
+      "hint": "Ekran devralma açıkken sunucu yeniden başladı (ya da bağlantı koptu). Devam etmek için pencerenin üstündeki \"Duraklatmayı kaldır\" düğmesine bas.",
+      "title": "Sunucuda hâlâ açık bir ekran devralma var"
+    },
+    "takeoverRequestConflict": {
+      "hint": "Aynı numaralı başka bir devralma isteği sunucuda zaten kayıtlı. Canlı görünümü kapatıp yeniden aç ve tekrar dene.",
+      "title": "Bu devralma isteği öncekiyle çakışıyor"
+    },
     "timeout": {
       "hint": "Bağlantını kontrol edip yeniden dene.",
       "title": "Bu çok uzun sürdü"

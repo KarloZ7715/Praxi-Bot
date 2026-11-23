@@ -239,6 +239,27 @@ impl Test {
             auto_grant: AtomicBool::new(true),
         }
     }
+    /// A restart on a machine whose display target got a different id (the
+    /// old one is gone, a new one is registered).
+    fn restarted_with_new_target(&self) -> Self {
+        let storage = Arc::new(storage::Storage::open(self.dir.path()).unwrap());
+        let agent = agent_core::AgentLoop::new(
+            storage.clone(),
+            tool_registry::ToolRegistry::new(),
+            agent_core::Providers::single(Arc::new(crate::fake::FakeProvider)),
+            agent_core::LoopConfig::default(),
+        );
+        let state = AppState::new(agent, storage, crate::DaemonConfig::new(TOKEN)).unwrap();
+        state.set_owner_key(OWNER_KEY.into());
+        let target = Arc::new(Target::new());
+        state.live_view().registry.register(target.clone());
+        Self {
+            state,
+            target,
+            dir: self.dir.clone(),
+            auto_grant: AtomicBool::new(true),
+        }
+    }
     fn router(&self, peer: Option<&str>) -> Router {
         if peer.is_some() {
             crate::peer_router(self.state.clone())
@@ -4880,4 +4901,71 @@ async fn host_admin_recover_audits_the_cleared_reason_and_owner_and_revokes_anot
     assert_eq!(d["by"], json!("host_admin"));
     assert_eq!(d["previous_owner"], json!("peer:alice"));
     assert_eq!(d["cleared_reason"], json!("local_override"), "{d:?}");
+}
+
+// ---- c599: a takeover interrupted by a restart is not stuck forever
+async fn plain_takeover(t: &Test, peer: &str) -> StatusCode {
+    let session = t.session(Some(peer)).await;
+    t.call(
+        Some(peer),
+        Method::POST,
+        "/v1/control/takeover",
+        Some(json!({"session_id":session,"request_id":Uuid::now_v7()})),
+    )
+    .await
+    .0
+}
+
+#[tokio::test]
+async fn the_same_device_retakes_a_restart_interrupted_takeover_on_a_new_target_id() {
+    let t = Test::new();
+    let _held = t.active(Some("alice")).await;
+    let t2 = t.restarted_with_new_target();
+    let old = t2.state.hub().takeover().unwrap();
+    assert_eq!(old.info.reason, Some(Reason::Restart));
+    assert_ne!(old.info.target_id, t2.target.info().target_id);
+    // Another device never inherits it.
+    grant(&t2, "bob", true, true).await;
+    assert_eq!(plain_takeover(&t2, "bob").await, StatusCode::CONFLICT);
+    // The same device does, without any remembered id.
+    assert_eq!(plain_takeover(&t2, "alice").await, StatusCode::ACCEPTED);
+}
+
+#[tokio::test]
+async fn a_local_override_is_not_retaken_by_the_same_device_after_a_restart() {
+    let t = Test::new();
+    let _held = t.active(Some("alice")).await;
+    local_override(&t).await;
+    let t2 = t.restarted_with_new_target();
+    assert_eq!(plain_takeover(&t2, "alice").await, StatusCode::FORBIDDEN);
+    assert_eq!(
+        t2.state.hub().takeover().unwrap().info.reason,
+        Some(Reason::LocalOverride)
+    );
+}
+
+#[tokio::test]
+async fn boot_clears_a_restart_latch_whose_screen_is_gone_and_audits_it() {
+    let t = Test::new();
+    let _held = t.active(Some("alice")).await;
+    // Same screen after the restart: a person decides, the boot keeps the latch.
+    let same = t.restarted();
+    assert!(!super::boot_recover_stale_takeover(&same.state).await);
+    assert!(same.state.hub().takeover().is_some());
+    // The screen is gone: the bot must not stay paused for nobody.
+    let t2 = t.restarted_with_new_target();
+    assert!(super::boot_recover_stale_takeover(&t2.state).await);
+    assert!(t2.state.hub().takeover().is_none());
+    assert!(t2.state.hub().latched().is_none());
+    assert_eq!(audit_count(&t2, "takeover.recovered"), 1);
+}
+
+#[tokio::test]
+async fn boot_never_clears_a_local_override() {
+    let t = Test::new();
+    let _held = t.active(Some("alice")).await;
+    local_override(&t).await;
+    let t2 = t.restarted_with_new_target();
+    assert!(!super::boot_recover_stale_takeover(&t2.state).await);
+    assert!(t2.state.hub().takeover().is_some());
 }

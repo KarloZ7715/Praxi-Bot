@@ -1671,8 +1671,12 @@ async fn serve_with_startup_timeout(
         // The work runs in its own task so that a panic is caught at the join.
         let work = {
             let leader = leader.clone();
+            let boot_state = state.clone();
             tokio::spawn(async move {
                 prepare.await;
+                // A restart-interrupted takeover whose screen is gone must not
+                // keep the bot paused with nobody driving.
+                live_view::boot_recover_stale_takeover(&boot_state).await;
                 leader.start().await
             })
         };

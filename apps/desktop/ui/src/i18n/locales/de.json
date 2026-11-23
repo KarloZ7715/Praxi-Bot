@@ -2905,6 +2905,18 @@
       "retry": "Erneut versuchen",
       "waited": "Wartet seit {{seconds}} s"
     },
+    "takeoverAlreadyOwned": {
+      "hint": "Warte, bis dieses Gerät loslässt, oder hebe zuerst seine Pause auf, wenn dir dieser Computer gehört.",
+      "title": "Ein anderes Gerät steuert diesen Bildschirm bereits"
+    },
+    "takeoverRecoveryRequired": {
+      "hint": "Der Server wurde neu gestartet (oder die Verbindung riss ab), während eine Bildschirm-Übernahme offen war. Klicke oben im Fenster auf \"Pause aufheben\", um fortzufahren.",
+      "title": "Auf dem Server ist noch eine Bildschirm-Übernahme offen"
+    },
+    "takeoverRequestConflict": {
+      "hint": "Eine andere Übernahme-Anfrage mit derselben Nummer ist dem Server schon bekannt. Schließe die Live-Ansicht, öffne sie neu und versuche es erneut.",
+      "title": "Diese Übernahme-Anfrage kollidiert mit einer früheren"
+    },
     "timeout": {
       "hint": "Prüfe deine Verbindung und versuche es erneut.",
       "title": "Das hat zu lange gedauert"
