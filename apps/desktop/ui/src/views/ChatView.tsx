@@ -4,7 +4,6 @@ import {
   ArrowUp,
   Bookmark,
   Paperclip,
-  Pencil,
   Phone,
   Plus,
   Square,
@@ -60,7 +59,7 @@ import { chatTitleLabel } from "../lib/chatTitle";
 import { pendingForChat } from "../lib/pendingDecisions";
 import { ChatFindBar } from "../components/ChatFindBar";
 import { Markdown } from "../components/Markdown";
-import { UserBubble } from "../components/UserBubble";
+import { UserMessageRow, AssistantMessageRow } from "../components/ChatMessageRow";
 import { MessageTime } from "../components/MessageTime";
 import { ModelPicker } from "../components/ModelPicker";
 import { DictateButton } from "../components/DictateButton";
@@ -68,7 +67,9 @@ import { useVoiceCall } from "../components/voiceCall/useVoiceCall";
 import { VoiceCallPanel } from "../components/voiceCall/VoiceCallPanel";
 import { MessageInfo } from "../components/MessageInfo";
 import { MessageActions } from "../components/MessageActions";
-import { EditMessage, RegenerateRow, SupersededView } from "../components/ResendTurn";
+import { composerPlaceholderKey, shouldFocusOnBoxClick, shouldTypeToFocus } from "../lib/composerFocus";
+import { RegenerateAction, RegenerateRow, SupersededView } from "../components/ResendTurn";
+import { IconAction, RunActionBar } from "../components/RunActionBar";
 import { CopyButton } from "../components/CopyButton";
 import { useAutoSpeak } from "../components/useAutoSpeak";
 import { SpeakButton } from "../components/SpeakButton";
@@ -76,7 +77,7 @@ import { QueuedMessages } from "../components/QueuedMessages";
 import { RunStatusLine } from "../components/RunStatusLine";
 import { RunChangesGate } from "../components/RunChangesGate";
 import { RunTimelineModal } from "../components/RunTimelineModal";
-import { ThinkingChain } from "../components/ThinkingChain";
+import { ChatStepGroup } from "../components/ChatStepGroup";
 import { WorkflowReview } from "../components/WorkflowReview";
 import { useToast } from "../components/Toast";
 import { useEngineConsent } from "../state/EngineConsent";
@@ -102,7 +103,7 @@ import { modelGroups } from "../lib/modelPicker";
 import { type ChatRunPhase, runBarModel, runStopUi, STOP_CONFIRM_MS } from "../lib/runBar";
 import { sendButtonDisabled, sendButtonMode } from "../lib/composerRun";
 import { type PendingFile, MAX_ATTACHMENT_BYTES, filesOf, room, uploadErrorKey } from "../lib/attachments";
-import { ComposerFiles, MessageFiles } from "../components/Attachments";
+import { ComposerFiles } from "../components/Attachments";
 import { enqueue, putBack, removeQueued, takeForNow, takeForRunEnd } from "../lib/messageQueue";
 import { groupPending, isBatchable, shouldBatch } from "../lib/approvalBatch";
 import { toolSentence } from "../lib/runSentence";
@@ -147,7 +148,6 @@ import {
 } from "../state/timeline";
 import ccStyles from "../components/ChatCards.module.css";
 import styles from "./ChatView.module.css";
-import msgStyles from "../components/MessageActions.module.css";
 import { type ErrorAction, type HumanError, humanError, humanLine, humanToolError } from "../lib/humanError";
 import type { ApiClient } from "../api/client";
 import { sendWithHostRecovery } from "../lib/hostRecovery";
@@ -171,6 +171,18 @@ const SLASH_ICONS: Record<string, typeof Plus> = {
   settings: Settings2, models: Brain, apps: LayoutGrid, schedules: CalendarClock
 };
 
+// Immutable run snapshots retain their grouped rows across unrelated runs' deltas.
+// Weak keys release cached Markdown/step data when a chat is left.
+const runSegments = new WeakMap<RunState, ReturnType<typeof groupRunItems>>();
+function segmentsFor(run: RunState) {
+  let segments = runSegments.get(run);
+  if (!segments) {
+    segments = groupRunItems(run.items, run.finishedMs !== undefined, run.startedMs);
+    runSegments.set(run, segments);
+  }
+  return segments;
+}
+
 type Entry =
   | { kind: "day"; key: string; ts: number }
   | { kind: "unread"; key: string; ts: number }
@@ -184,9 +196,7 @@ type Entry =
   | { kind: "runStopped"; key: string; ts: number }
   | { kind: "route"; key: string; ts: number; run: RunState }
   | { kind: "changes"; key: string; ts: number; run: RunState }
-  | { kind: "remember"; key: string; ts: number; run: RunState }
-  | { kind: "timeline"; key: string; ts: number; run: RunState }
-  | { kind: "workflow"; key: string; ts: number; run: RunState };
+  | { kind: "timeline"; key: string; ts: number; run: RunState; remember: boolean; workflow: boolean };
 
 /** `idle` = offer the button; `saved` = done; `hidden` = the daemon said no (409). */
 type RememberState = "idle" | "busy" | "saved" | "hidden";
@@ -370,6 +380,23 @@ export function ChatView({
     if (liveChatSlots?.composer) inputRef.current?.focus({ preventScroll: true });
   }, [liveChatSlots?.composer]);
 
+  // Type anywhere in the chat: the first character goes to the composer (nothing else owns the keys).
+  useEffect(() => {
+    const onType = (e: globalThis.KeyboardEvent) => {
+      const el = inputRef.current;
+      const sel = window.getSelection();
+      const ok = shouldTypeToFocus(e, {
+        composerReady: !!el && el.isConnected && !el.disabled && !el.readOnly,
+        dialogOpen: document.querySelector("[role='dialog'], [aria-modal='true'], dialog[open]") !== null,
+        selectionActive: !!sel && !sel.isCollapsed && sel.toString().length > 0
+      });
+      if (ok && el && document.activeElement !== el) {
+        el.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("keydown", onType);
+    return () => window.removeEventListener("keydown", onType);
+  }, []);
   useEffect(() => {
     const el = inputRef.current;
     if (el && pendingCaret.current !== null) {
@@ -440,9 +467,9 @@ export function ChatView({
   }, [loadMessages, finishedCount]);
 
   // ---- the run to stop / resume
-  const serverRuns = runs.filter(
+  const serverRuns = useMemo(() => runs.filter(
     (r) => r.chat_id === chatId && !r.parent_run_id
-  );
+  ), [runs, chatId]);
   const serverLive = [...serverRuns].reverse().find((r) => isProcessingRunState(r.state));
   const serverPaused = [...serverRuns].reverse().find((r) => r.state === "paused");
   const eventLive: RunState | undefined = [...chatRuns]
@@ -533,11 +560,7 @@ export function ChatView({
           run
         });
       }
-      const segs = groupRunItems(
-        run.items,
-        run.finishedMs !== undefined,
-        run.startedMs
-      );
+      const segs = segmentsFor(run);
       segs.forEach((seg, si) => {
         const next = segs[si + 1];
         const nextTs = next
@@ -587,23 +610,10 @@ export function ChatView({
           kind: "timeline",
           key: `${run.id}-timeline`,
           ts: run.finishedMs,
-          run
+          run,
+          remember: canOfferRemember(run) && remember[run.id] !== "hidden",
+          workflow: serverRuns.some((s) => s.id === run.id && s.state === "succeeded" && !s.parent_run_id)
         });
-      }
-      if (
-        run === lastFinished &&
-        canOfferRemember(run) &&
-        remember[run.id] !== "hidden"
-      ) {
-        out.push({
-          kind: "remember",
-          key: `${run.id}-remember`,
-          ts: run.finishedMs ?? run.startedMs,
-          run
-        });
-      }
-      if (run === lastFinished && serverRuns.some(s => s.id === run.id && s.state === "succeeded" && !s.parent_run_id)) {
-        out.push({ kind: "workflow", key: `${run.id}-workflow`, ts: run.finishedMs ?? run.startedMs, run });
       }
     }
     // Array.prototype.sort is stable: equal timestamps keep insertion order.
@@ -616,6 +626,12 @@ export function ChatView({
     });
   }, [messages, chatRuns, showAgentRoute, remember, seenUntilMs, serverRuns, jumpMessageId]);
 
+  const lastActionsKey = useMemo(() => {
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      if (entries[i].kind === "timeline") return entries[i].key;
+    }
+    return null;
+  }, [entries]);
   const turn = useMemo(() => lastTurn(messages), [messages]);
   const lastItem = entries[entries.length - 1];
   // The button is the stop button from the moment a message is sent (before any run event) while the box is empty.
@@ -1217,7 +1233,6 @@ export function ChatView({
   const guestBot = (botId: string | null | undefined) =>
     botId && botId !== chat?.bot_id ? bots.find((b) => b.id === botId) : undefined;
   const runGuest = (runId: string) => guestBot(runs.find((r) => r.id === runId)?.bot_id);
-  const botAvatarFor = (decorative: boolean, size: "xs" | "sm" = "sm", guest?: Bot) => <BotAvatar bot={guest ? botView(guest) : (view ?? { id: chat?.bot_id ?? "unknown", name: "Bot" })} size={size} state={guest ? undefined : avatarState} decorative={decorative} />;
   // Another bot's reply: its own avatar (as in the sidebar) and its name in its colour above the bubble.
   const guestName = (guest?: Bot) => {
     if (!guest) return null;
@@ -1295,7 +1310,7 @@ export function ChatView({
             >
               <CopyButton text={item.text} />
               <SpeakButton id={`${runId}:${item.ts}`} text={item.text} botId={chat?.bot_id} />
-              <MessageInfo side="bot" ts={item.ts} runId={runId} run={run} runDto={runs.find((r) => r.id === runId)} />
+              <MessageInfo client={client} side="bot" ts={item.ts} runId={runId} run={run} runDto={runs.find((r) => r.id === runId)} />
             </MessageActions>
           </div>
         );
@@ -1484,69 +1499,26 @@ export function ChatView({
                 );
               case "user":
                 return (
-                  <div key={e.key} id={e.key} tabIndex={-1} className={styles.userRow} data-message-row="user">
-                    {editingId === e.msgId && canResend ? (
-                      <EditMessage
-                        initial={e.text}
-                        usedWriteTools={turn?.usedWriteTools === true}
-                        busy={resending}
-                        onSave={(value) => void resendTurn(value)}
-                        onCancel={() => setEditingId(null)}
-                      />
-                    ) : (
-                    <UserBubble text={e.text}>
-                      <MessageFiles client={client} chatId={chatId} attachments={e.attachments ?? []} />
-                      {splitMentions(e.text, mentionBots).map((part, i) =>
-                        part.color ? (
-                          <span key={i} className={styles.mention} style={{ "--mention-color": part.color } as CSSProperties}>{part.text}</span>
-                        ) : (
-                          part.text
-                        )
-                      )}
-                    </UserBubble>
-                    )}
-                    <MessageActions
-                      side="me"
-                      meta={<MessageTime ts={e.ts} mode={messageTimes} />}
-                    >
-                      <CopyButton text={e.text} />
-                      {canResend && turn?.user.id === e.msgId && editingId !== e.msgId ? (
-                        <button
-                          type="button"
-                          className={msgStyles.copyBtn}
-                          aria-label={t("chat.resend.edit")}
-                          title={t("chat.resend.edit")}
-                          data-testid="edit-message-button"
-                          onClick={() => setEditingId(e.msgId)}
-                        >
-                          <Pencil aria-hidden="true" />
-                        </button>
-                      ) : null}
-                      <MessageInfo side="me" ts={e.ts} source={e.source} />
-                    </MessageActions>
-                  </div>
+                  <UserMessageRow key={e.key} id={e.key} msgId={e.msgId} ts={e.ts} text={e.text}
+                    source={e.source} attachments={e.attachments} client={client} chatId={chatId}
+                    mentionBots={mentionBots} times={messageTimes}
+                    editable={canResend && turn?.user.id === e.msgId}
+                    editing={editingId === e.msgId && canResend}
+                    busy={editingId === e.msgId && resending}
+                    usedWriteTools={editingId === e.msgId && turn?.usedWriteTools === true}
+                    onEdit={setEditingId}
+                    onSave={editingId === e.msgId ? (value) => void resendTurn(value) : undefined}
+                    onCancel={editingId === e.msgId ? () => setEditingId(null) : undefined} />
                 );
               case "superseded":
                 return <SupersededView key={e.key} group={e.group} />;
               case "assistant":
                 return (
-                  <div key={e.key} id={e.key} tabIndex={-1} className={styles.assistantRow} data-message-row="assistant">
-                    <div className={styles.assistantBubble}>
-                      {e.source?.startsWith("imported") ? (
-                        <span className={styles.importedBadge}>{t("chat.imported")}</span>
-                      ) : null}
-                      {lead ? guestName(guestBot(e.botId)) : null}
-                      <Markdown text={e.text} />
-                    </div>
-                    <MessageActions
-                      side="bot"
-                      meta={<MessageTime ts={e.ts} mode={messageTimes} />}
-                    >
-                      <CopyButton text={e.text} />
-                      <SpeakButton id={e.key} text={e.text} botId={e.botId ?? chat?.bot_id} />
-                      <MessageInfo side="bot" ts={e.ts} source={e.source} runId={e.runId} run={e.runId ? events.runs[e.runId] : undefined} runDto={runs.find((r) => r.id === e.runId)} />
-                    </MessageActions>
-                  </div>
+                  <AssistantMessageRow key={e.key} id={e.key} ts={e.ts} text={e.text} source={e.source}
+                    botId={e.botId ?? chat?.bot_id} runId={e.runId}
+                    guest={lead ? guestBot(e.botId) : undefined} times={messageTimes} client={client}
+                    run={e.runId ? events.runs[e.runId] : undefined}
+                    runDto={runs.find((r) => r.id === e.runId)} />
                 );
               case "imported_note": {
                 const counts = importedNoteCounts(e.text);
@@ -1602,8 +1574,6 @@ export function ChatView({
                   </div>
                 );
               }
-              case "workflow":
-                return client ? <div key={e.key} className={styles.rememberRow}><WorkflowReview client={client} runId={e.run.id} canRemember={true} /></div> : null;
               case "changes": {
                 const restoreSignal = e.run.items.filter(
                   (item) =>
@@ -1621,48 +1591,53 @@ export function ChatView({
                   </div>
                 );
               }
-              case "timeline":
-                return (
-                  <div key={e.key} className={styles.rememberRow}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title={t("runReport.hint")}
-                      onClick={() => setTimelineRunId(e.run.id)}
-                      data-testid="run-timeline"
-                    >
-                      <ListOrdered />{t("runReport.button")}
-                    </Button>
-                  </div>
-                );
-              case "remember": {
+              case "timeline": {
                 const st = remember[e.run.id] ?? "idle";
+                const regen = canResend && turn?.answered === true && e.key === lastActionsKey;
                 return (
                   <div key={e.key} className={styles.rememberRow}>
-                    {st === "saved" ? (
-                      <span className={styles.rememberDone} role="status">
-                        {t("chat.remember.saved")}
-                      </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={st === "busy"}
-                        title={t("chat.remember.hint")}
-                        onClick={() => void rememberRun(e.run.id)}
-                        data-testid="remember-run"
-                      >
-                        <Bookmark />{t("chat.remember.button")}
-                      </Button>
-                    )}
+                    <RunActionBar label={t("chat.runActions")}>
+                      <IconAction
+                        icon={ListOrdered}
+                        label={t("runReport.button")}
+                        onClick={() => setTimelineRunId(e.run.id)}
+                        testId="run-timeline"
+                      />
+                      {e.remember ? (
+                        st === "saved" ? (
+                          <span className={styles.rememberDone} role="status">
+                            {t("chat.remember.saved")}
+                          </span>
+                        ) : (
+                          <IconAction
+                            icon={Bookmark}
+                            label={t("chat.remember.button")}
+                            disabled={st === "busy"}
+                            onClick={() => void rememberRun(e.run.id)}
+                            testId="remember-run"
+                          />
+                        )
+                      ) : null}
+                      {e.workflow && client ? (
+                        <WorkflowReview client={client} runId={e.run.id} canRemember={true} />
+                      ) : null}
+                      {regen ? (
+                        <RegenerateAction
+                          key={turn?.user.id}
+                          usedWriteTools={turn?.usedWriteTools === true}
+                          busy={resending}
+                          onRegenerate={() => void resendTurn()}
+                        />
+                      ) : null}
+                    </RunActionBar>
                   </div>
                 );
               }
               case "chain":
                 return (
-                  <div key={e.key} className={styles.chainRow}>
-                    <ThinkingChain chain={e.chain} times={messageTimes} avatar={lead ? botAvatarFor(true, "xs", runGuest(e.runId)) : undefined} />
-                  </div>
+                  <ChatStepGroup key={e.key} chain={e.chain} times={messageTimes} lead={lead}
+                    bot={runGuest(e.runId) ?? bot} botId={chat?.bot_id}
+                    state={runGuest(e.runId) ? undefined : avatarState} />
                 );
               case "item":
                 return (
@@ -1680,7 +1655,7 @@ export function ChatView({
                 );
             }
           })}
-          {canResend && turn?.answered ? (
+          {canResend && turn?.answered && lastActionsKey === null ? (
             <RegenerateRow
               key={turn.user.id}
               usedWriteTools={turn.usedWriteTools}
@@ -1914,7 +1889,17 @@ export function ChatView({
               </p>
             </div>
           ) : null}
-          <div className={styles.box}>
+          <div
+            className={styles.box}
+            data-testid="composer-box"
+            onMouseDown={(e) => {
+              // Empty surface: focus the field. Controls and the field itself keep their own behaviour.
+              if (e.button === 0 && shouldFocusOnBoxClick(e.target, e.currentTarget)) {
+                e.preventDefault();
+                inputRef.current?.focus();
+              }
+            }}
+          >
           <ComposerFiles files={files} onRemove={removeFile} />
           <div className={styles.inputWrap}>
           {paintsMentions ? (
@@ -1944,13 +1929,7 @@ export function ChatView({
             aria-activedescendant={
               menuOpen && menuItems.length > 0 ? `${menuId}-${menuActive}` : undefined
             }
-            placeholder={
-              awaitingApproval
-                ? t("chat.placeholderWaiting")
-                : active
-                  ? t("chat.placeholderBusy")
-                  : t("chat.placeholder")
-            }
+            placeholder={t(composerPlaceholderKey({ awaitingApproval, runActive: active }))}
             aria-label={t("chat.placeholder")}
             onChange={(e) => {
               setNav((n) => afterEdit(n, e.target.value));
