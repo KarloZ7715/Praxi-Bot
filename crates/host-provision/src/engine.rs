@@ -606,7 +606,10 @@ impl Engine<'_> {
                 })
                 .unwrap_or_else(|r| r);
             s.finish(report, r)?;
-            let params = format!("version={tag}\ndesktop={}\n", u8::from(s.params.desktop));
+            let mut params = format!("version={tag}\ndesktop={}\n", u8::from(s.params.desktop));
+            if mode == Mode::Upgrade {
+                params.push_str("update=1\n");
+            }
             let r = s
                 .exec(
                     "install.run",

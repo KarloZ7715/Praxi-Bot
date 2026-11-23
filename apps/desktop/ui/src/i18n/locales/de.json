@@ -2425,7 +2425,7 @@
         "title": "Dieser Computer hat das Terminal nicht erlaubt"
       },
       "host_outdated": {
-        "hint": "Der Computer ist online, aber seine Praxi-Bot-Version kennt das Terminal noch nicht. Aktualisiere Praxi-Bot dort, starte es neu und versuche es erneut.",
+        "hint": "Der Computer ist online, aber seine Praxi-Bot-Version kennt das Terminal noch nicht. Aktualisiere den Server und versuche es dann erneut.",
         "title": "Auf diesem Computer läuft ein älteres Praxi-Bot"
       },
       "host_setup_conflict": {
@@ -4429,7 +4429,7 @@
       "unreachable": "Nicht erreichbar"
     },
     "title": "Deine Server",
-    "updateHelp": "Um einen Server zu aktualisieren, öffne sein Terminal und führe dort das Praxi-Update aus. Ein Update mit einem Klick gibt es noch nicht."
+    "updateHelp": "Mit der App hinzugefügte Server lassen sich hier aktualisieren. Für jeden anderen Server zeigt Server aktualisieren die genauen Befehle für den Server."
   },
   "settings": {
     "accent": {
@@ -5421,6 +5421,112 @@
     "toggle": "Fenster anzeigen / ausblenden",
     "tooltip": "Praxi-Bot",
     "tooltipNeeds": "Praxi-Bot: {n} brauchen dich"
+  },
+  "updateServer": {
+    "available": "Update verfügbar",
+    "button": "Server aktualisieren",
+    "checkAgain": "Erneut prüfen",
+    "checking": "Die Version des Servers wird geprüft …",
+    "commandsLabel": "Befehle für den Server",
+    "confirm": "Server aktualisieren",
+    "copied": "Befehle kopiert.",
+    "copy": "Befehle kopieren",
+    "copyFailed": "Kopieren nicht möglich. Markiere den Text und kopiere ihn von Hand.",
+    "doneBody": "Der Server wurde neu gestartet und antwortet. Deine Bots und Daten sind wie zuvor.",
+    "doneTitle": "{{name}} ist aktuell",
+    "dontClose": "Das dauert ein paar Minuten. Du kannst dieses Fenster offen lassen; der Server startet gegen Ende neu.",
+    "fail": {
+      "generic": {
+        "body": "Auf dem Server ist etwas schiefgelaufen. Ist der Installer weit genug gekommen, hat er die vorherige Version wiederhergestellt.",
+        "next": "Sieh dir die Details unten an. Du kannst es erneut versuchen oder die Befehle selbst auf dem Server ausführen.",
+        "title": "Das Update wurde nicht abgeschlossen"
+      },
+      "host_key": {
+        "body": "Du hast den Fingerabdruck des Servers nicht bestätigt (oder er hat sich geändert, seit du den Server hinzugefügt hast). Es wurde nichts geändert.",
+        "next": "Hast du am Server nichts geändert, gibt sich vielleicht jemand als er aus: mach nicht weiter. Sonst versuche es erneut und prüfe den Fingerabdruck.",
+        "title": "Die Identität des Servers wurde nicht bestätigt"
+      },
+      "no_ssh": {
+        "body": "Das Programm für die Anmeldung an Servern (OpenSSH) wurde nicht gefunden oder ließ sich nicht vorbereiten.",
+        "next": "Installiere OpenSSH auf diesem Computer oder nutze stattdessen die Befehle.",
+        "title": "Praxi-Bot kann sich von hier nicht anmelden"
+      },
+      "rolled_back": {
+        "body": "Die neue Version ließ sich auf dem Server nicht starten, deshalb hat Praxi-Bot die vorherige Version wiederhergestellt. Deine Daten wurden nicht angetastet.",
+        "next": "Versuche es später erneut oder kopiere die Details unten, wenn du um Hilfe bittest.",
+        "title": "Das Update hat nicht geklappt, die alte Version ist zurück"
+      },
+      "unreachable": {
+        "body": "Der Server hat die Anmeldung nicht akzeptiert oder nicht geantwortet. Es wurde nichts geändert.",
+        "next": "Prüfe, ob der Server an ist und du dich noch anmelden kannst, und versuche es dann erneut.",
+        "title": "Verbindung zum Server nicht möglich"
+      },
+      "verify": {
+        "body": "Die Version hat die Signaturprüfung nicht bestanden und wurde deshalb nicht installiert. Der Server läuft weiter mit seiner bisherigen Version.",
+        "next": "Mit deinen Daten ist alles in Ordnung. Versuche es in ein paar Minuten erneut. Passiert es wieder, installiere nichts von Hand, sondern frag um Hilfe.",
+        "title": "Der Download konnte nicht verifiziert werden"
+      }
+    },
+    "hostKeyBody": "{{host}} hat sich mit diesem Fingerabdruck gemeldet. Mach nur weiter, wenn er mit dem deines Server-Anbieters oder des Servers selbst übereinstimmt.",
+    "hostKeyNo": "Nein, abbrechen",
+    "hostKeyTitle": "Ist das wirklich dein Server?",
+    "hostKeyYes": "Ja, weiter",
+    "lead": "Installiere auf deinem Server die Praxi-Bot-Version, die zu dieser App passt.",
+    "logEmpty": "Noch nichts.",
+    "manualBody": "Dieser Computer hat keine gespeicherte Anmeldung für diesen Server (er wurde anders hinzugefügt). Melde dich am Server an und füge die Befehle unten ein. Sie laden die zu dieser App passende Version herunter und prüfen ihre Signatur vor der Installation.",
+    "manualNoSsh": "Praxi-Bot kann sich für dich nicht an diesem Server anmelden",
+    "manualNote": "Deine Daten bleiben erhalten. Komm danach hierher zurück und drücke Erneut prüfen.",
+    "manualTitle": "Das Update selbst auf dem Server ausführen",
+    "noRelease": "Diese App weiß nicht, aus welcher Version sie stammt, und kann die genaue Version daher nicht nennen. Installiere die neueste Version aus der Praxi-Bot-Anleitung (Seite Linux-Server) mit der Option --update.",
+    "p1": "Der Server startet für ein paar Sekunden neu.",
+    "p2": "Bots, die dort laufen, pausieren kurz und machen danach weiter.",
+    "p3": "Deine Daten, Bots und Einstellungen bleiben erhalten.",
+    "p4": "Eine Kopie deiner Daten und der bisherigen Version bleibt auf dem Server, damit sie zurückgespielt werden kann.",
+    "p5": "Es wird nur die Version installiert, die zu dieser App passt, und Praxi-Bot prüft zuerst ihre Signatur. Nichts Ungeprüftes wird ausgeführt.",
+    "progress": "Fortschritt des Updates",
+    "retry": "Erneut versuchen",
+    "rows": {
+      "backup": {
+        "done": "Kopie gespeichert",
+        "failed": "Kopie konnte nicht gespeichert werden",
+        "pending": "Wartet",
+        "running": "Eine Kopie deiner Daten wird gespeichert …",
+        "title": "Sicherheitskopie anlegen"
+      },
+      "check": {
+        "done": "Der Server antwortet",
+        "failed": "Der Server hat nicht geantwortet",
+        "pending": "Wartet",
+        "running": "Der Server wird nach seinem Zustand gefragt …",
+        "title": "Prüfen, ob alles läuft"
+      },
+      "connect": {
+        "done": "Verbunden",
+        "failed": "Verbindung nicht möglich",
+        "pending": "Wartet",
+        "running": "Anmelden und den Server prüfen …",
+        "title": "Mit dem Server verbinden"
+      },
+      "install": {
+        "done": "Neue Version installiert",
+        "failed": "Das Update wurde nicht abgeschlossen",
+        "pending": "Wartet",
+        "running": "Die Version wird heruntergeladen, geprüft, installiert und der Server neu gestartet …",
+        "title": "Herunterladen, prüfen und installieren"
+      }
+    },
+    "safe": "Geht etwas schief, kehrt der Server zu seiner vorherigen Version zurück. Du siehst, was passiert ist und was du als Nächstes tun kannst.",
+    "showCommands": "Stattdessen die Befehle zeigen",
+    "showLog": "Details anzeigen",
+    "starting": "Das Update wird gestartet …",
+    "stopped": "Das Update wurde vor dem Ende gestoppt.",
+    "thisServer": "dieser Server",
+    "title": "Server aktualisieren",
+    "titleFor": "{{name}} aktualisieren",
+    "unknown": "Version unbekannt (der Server ist vielleicht aus).",
+    "upToDate": "Aktuell",
+    "versionLine": "Server-Version {{server}} · diese App {{app}}",
+    "whatHappens": "Was passiert"
   },
   "usage": {
     "bot": "Bot",

@@ -165,7 +165,13 @@ cmd_install() {
   [[ "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.+-]+)?$ ]] || die "bad or missing version"
   [[ -f "${STAGE}/install-linux.sh" ]] || die "install-linux.sh was not uploaded"
   local args=(--version "${version}" --host-mode)
-  [[ "${P[desktop]:-1}" != "1" ]] || args+=(--with-desktop-session)
+  if [[ "${P[update]:-0}" == "1" ]]; then
+    # In-place update: the installer keeps data, config, display and mode, rolls back by itself if
+    # anything fails and keeps the previous program files as /opt/praxi.backup-<timestamp>.
+    args+=(--update)
+  else
+    [[ "${P[desktop]:-1}" != "1" ]] || args+=(--with-desktop-session)
+  fi
   DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l NEEDRESTART_SUSPEND=1 bash "${STAGE}/install-linux.sh" "${args[@]}"
 }
 

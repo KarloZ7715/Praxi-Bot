@@ -2425,7 +2425,7 @@
         "title": "That computer did not allow the terminal"
       },
       "host_outdated": {
-        "hint": "The computer is online, but its Praxi-Bot version does not know the terminal yet. Update Praxi-Bot there and restart it, then try again.",
+        "hint": "The computer is online, but its Praxi-Bot version does not know the terminal yet. Update the server, then try again.",
         "title": "That computer runs an older Praxi-Bot"
       },
       "host_setup_conflict": {
@@ -4429,7 +4429,7 @@
       "unreachable": "Cannot be reached"
     },
     "title": "Your servers",
-    "updateHelp": "To update a server, open its terminal and run the Praxi update there. A one-click update is not available yet."
+    "updateHelp": "Servers added with the app can be updated here. For any other server, Update server shows the exact commands to run on it."
   },
   "settings": {
     "accent": {
@@ -5421,6 +5421,112 @@
     "toggle": "Show / hide window",
     "tooltip": "Praxi-Bot",
     "tooltipNeeds": "Praxi-Bot: {n} need you"
+  },
+  "updateServer": {
+    "available": "Update available",
+    "button": "Update server",
+    "checkAgain": "Check again",
+    "checking": "Checking the server's version…",
+    "commandsLabel": "Commands to run on the server",
+    "confirm": "Update server",
+    "copied": "Commands copied.",
+    "copy": "Copy commands",
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "doneBody": "The server restarted and answers. Your bots and data are as you left them.",
+    "doneTitle": "{{name}} is up to date",
+    "dontClose": "This takes a few minutes. You can keep this window open; the server restarts near the end.",
+    "fail": {
+      "generic": {
+        "body": "Something went wrong on the server. If the installer got far enough, it put the previous version back.",
+        "next": "Open the details below. You can try again, or run the commands yourself on the server.",
+        "title": "The update did not finish"
+      },
+      "host_key": {
+        "body": "You did not confirm the server's fingerprint (or it changed since you added the server). Nothing was changed.",
+        "next": "If you did not change anything on the server, someone may be pretending to be it: do not continue. Otherwise try again and check the fingerprint.",
+        "title": "The server's identity was not accepted"
+      },
+      "no_ssh": {
+        "body": "The program that logs in to servers (OpenSSH) was not found or could not be prepared.",
+        "next": "Install OpenSSH on this computer, or use the commands instead.",
+        "title": "Praxi-Bot cannot log in from here"
+      },
+      "rolled_back": {
+        "body": "The new version could not start on the server, so Praxi-Bot put the previous version back. Your data was not touched.",
+        "next": "Try again later, or open the details below and copy them when you ask for help.",
+        "title": "The update did not work, the old version is back"
+      },
+      "unreachable": {
+        "body": "The server did not accept the login or did not answer. Nothing was changed.",
+        "next": "Check that the server is on and that you can still log in to it, then try again.",
+        "title": "Could not connect to the server"
+      },
+      "verify": {
+        "body": "The release did not pass the signature check, so it was not installed. The server still runs the version it had before.",
+        "next": "Nothing is wrong with your data. Try again in a few minutes. If it keeps happening, do not install it by hand: ask for help.",
+        "title": "The download could not be verified"
+      }
+    },
+    "hostKeyBody": "{{host}} identified itself with this fingerprint. Continue only if it is the one from your server provider or from the server itself.",
+    "hostKeyNo": "No, stop",
+    "hostKeyTitle": "Is this really your server?",
+    "hostKeyYes": "Yes, continue",
+    "lead": "Install the Praxi-Bot version that matches this app on your server.",
+    "logEmpty": "Nothing yet.",
+    "manualBody": "This computer has no saved login for this server (it was added another way). Log in to the server and paste the commands below. They download the release that matches this app and check its signature before installing.",
+    "manualNoSsh": "Praxi-Bot cannot log in to this server for you",
+    "manualNote": "Your data is kept. Afterwards come back here and press Check again.",
+    "manualTitle": "Run the update on the server yourself",
+    "noRelease": "This app does not know which release it came from, so it cannot name the exact version. Install the latest release from the Praxi-Bot guide (Linux server page) with the --update option.",
+    "p1": "The server restarts for a few seconds.",
+    "p2": "Bots running there pause for that moment and carry on afterwards.",
+    "p3": "Your data, bots and settings are kept.",
+    "p4": "A copy of your data and of the previous version is kept on the server, so it can be put back.",
+    "p5": "Only the release that matches this app is installed, and Praxi-Bot checks its signature first. Nothing unchecked is ever run.",
+    "progress": "Update progress",
+    "retry": "Try again",
+    "rows": {
+      "backup": {
+        "done": "Copy saved",
+        "failed": "Could not save the copy",
+        "pending": "Waiting",
+        "running": "Saving a copy of your data…",
+        "title": "Making a safety copy"
+      },
+      "check": {
+        "done": "The server answers",
+        "failed": "The server did not answer",
+        "pending": "Waiting",
+        "running": "Asking the server for its health…",
+        "title": "Checking that it works"
+      },
+      "connect": {
+        "done": "Connected",
+        "failed": "Could not connect",
+        "pending": "Waiting",
+        "running": "Logging in and checking the server…",
+        "title": "Connecting to the server"
+      },
+      "install": {
+        "done": "New version installed",
+        "failed": "The update did not finish",
+        "pending": "Waiting",
+        "running": "Downloading the release, verifying it, installing it and restarting the server…",
+        "title": "Downloading, checking and installing"
+      }
+    },
+    "safe": "If something goes wrong, the server goes back to the version it had before. You will see what happened and what to do next.",
+    "showCommands": "Show the commands instead",
+    "showLog": "Show details",
+    "starting": "Starting the update…",
+    "stopped": "The update was stopped before it finished.",
+    "thisServer": "this server",
+    "title": "Update server",
+    "titleFor": "Update {{name}}",
+    "unknown": "Version unknown (the server may be off).",
+    "upToDate": "Up to date",
+    "versionLine": "Server version {{server}} · this app {{app}}",
+    "whatHappens": "What will happen"
   },
   "usage": {
     "bot": "Bot",

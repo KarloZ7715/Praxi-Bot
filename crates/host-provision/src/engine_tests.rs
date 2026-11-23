@@ -23,6 +23,7 @@ struct Fake {
     keys: Vec<ScannedKey>,
     preflight: RefCell<String>,
     fail: RefCell<HashMap<&'static str, i32>>,
+    fail_stderr: RefCell<String>,
     desktops: RefCell<Vec<String>>,
     calls: RefCell<Vec<(RemoteCmd, String)>>,
 }
@@ -36,6 +37,7 @@ impl Fake {
             }],
             preflight: RefCell::new(good_facts()),
             fail: RefCell::new(HashMap::new()),
+            fail_stderr: RefCell::new("boom".into()),
             desktops: RefCell::new(Vec::new()),
             calls: RefCell::new(Vec::new()),
         }
@@ -64,7 +66,7 @@ impl Transport for Fake {
         if let Some(code) = self.fail.borrow().get(name) {
             return Ok(Output {
                 code: *code,
-                stderr: "boom".into(),
+                stderr: self.fail_stderr.borrow().clone(),
                 ..Output::default()
             });
         }
@@ -546,6 +548,7 @@ fn a_host_already_paired_with_this_computer_is_confirmed_not_paired_twice() {
     *fake.preflight.borrow_mut() = installed_facts();
     let local = Local {
         preexisting: true,
+        paired: RefCell::new(true),
         ..Local::default()
     };
     let mut ui = TestUi {
@@ -567,4 +570,96 @@ fn a_host_already_paired_with_this_computer_is_confirmed_not_paired_twice() {
         !fake.ran(RemoteCmd::Provision(Sub::Screen)),
         "existing privileges are left alone"
     );
+}
+
+fn old_server_facts() -> String {
+    installed_facts().replace("praxi_version=0.1.0", "praxi_version=0.0.9")
+}
+
+fn upgrade_ui() -> TestUi {
+    TestUi {
+        accept: true,
+        asked: 0,
+        cancel_after_pair: None,
+    }
+}
+
+/// A paired server that runs an older version, as the wizard stored it.
+fn paired_record(dir: &std::path::Path) -> Local {
+    let store = Store::new(dir.join("hosts"));
+    let mut rec = record();
+    rec.paired_host_id = Some("hostid1".into());
+    rec.desktop_key = Some("deskkey1".into());
+    store.save(&rec).unwrap();
+    Local {
+        preexisting: true,
+        ..Local::default()
+    }
+}
+
+#[test]
+fn upgrade_updates_in_place_and_checks_health() {
+    let dir = tempfile::tempdir().unwrap();
+    let (fake, mut ui) = (Fake::new(), upgrade_ui());
+    let local = paired_record(dir.path());
+    fake.desktops.borrow_mut().push("deskkey1".into());
+    *fake.preflight.borrow_mut() = old_server_facts();
+    let r = run(dir.path(), &fake, &local, &mut ui, Mode::Upgrade);
+    assert!(r.ok(), "{}", r.table());
+    assert_eq!(status_of(&r, "install.run"), Status::Pass);
+    assert!(local.forgotten.borrow().is_empty(), "nothing is un-paired");
+    assert_eq!(status_of(&r, "health.version"), Status::Pass);
+    let calls = fake.calls.borrow();
+    let install = calls
+        .iter()
+        .find(|(c, _)| *c == RemoteCmd::Provision(Sub::Install))
+        .unwrap();
+    assert!(
+        install.1.contains(
+            "update=1
+"
+        ),
+        "{}",
+        install.1
+    );
+    assert!(
+        calls
+            .iter()
+            .any(|(c, _)| *c == RemoteCmd::Provision(Sub::Snapshot)),
+        "data is snapshotted before the update"
+    );
+}
+
+#[test]
+fn upgrade_stops_on_a_failed_verification_and_never_pairs_or_reports_health() {
+    let dir = tempfile::tempdir().unwrap();
+    let (fake, mut ui) = (Fake::new(), upgrade_ui());
+    let local = paired_record(dir.path());
+    *fake.preflight.borrow_mut() = old_server_facts();
+    fake.fail.borrow_mut().insert("install", 1);
+    *fake.fail_stderr.borrow_mut() = "attestation verification failed: digest mismatch
+[praxi-install] rollback complete; previously active services restarted and active"
+        .into();
+    let r = run(dir.path(), &fake, &local, &mut ui, Mode::Upgrade);
+    assert!(!r.ok());
+    assert_eq!(status_of(&r, "install.run"), Status::Fail);
+    let detail = &r
+        .results
+        .iter()
+        .find(|s| s.id == "install.run")
+        .unwrap()
+        .detail;
+    assert!(detail.contains("rollback complete"), "{detail}");
+    assert!(!r.results.iter().any(|s| s.id.starts_with("health")));
+}
+
+#[test]
+fn upgrade_of_an_unreachable_server_fails_at_connect() {
+    let dir = tempfile::tempdir().unwrap();
+    let (fake, mut ui) = (Fake::new(), upgrade_ui());
+    let local = paired_record(dir.path());
+    fake.fail.borrow_mut().insert("", 255);
+    let r = run(dir.path(), &fake, &local, &mut ui, Mode::Upgrade);
+    assert!(!r.ok());
+    assert!(!fake.ran(RemoteCmd::Provision(Sub::Install)));
 }

@@ -1171,6 +1171,8 @@ fn api_routes() -> Router<AppState> {
         )
         .route("/v1/hosts/setup", post(host_setup::start))
         .route("/v1/hosts/setup/ssh-keys", get(host_setup::ssh_keys))
+        .route("/v1/hosts/setup/update", post(host_setup::start_update))
+        .route("/v1/hosts/{id}/version", get(host_links::host_version))
         .route("/v1/hosts/setup/{job}", get(host_setup::get))
         .route("/v1/hosts/setup/{job}/host-key", post(host_setup::host_key))
         .route("/v1/hosts/setup/{job}/cancel", post(host_setup::cancel))
