@@ -1579,6 +1579,31 @@ mod tests {
     use clap::CommandFactory;
 
     #[test]
+    fn host_invite_accepts_ttl_and_ticket_only_for_the_one_command_setup() {
+        let cli = Cli::try_parse_from([
+            "bot",
+            "host",
+            "invite",
+            "--role",
+            "desktop",
+            "--ttl-secs",
+            "1800",
+            "--ticket-only",
+        ])
+        .unwrap();
+        assert!(matches!(
+            cli.command,
+            Some(Command::Host {
+                action: host::HostCmd::Invite {
+                    ttl_secs: Some(1800),
+                    ticket_only: true,
+                    ..
+                }
+            })
+        ));
+    }
+
+    #[test]
     fn self_update_flags_parse_and_rollback_conflicts_are_rejected() {
         let cli =
             Cli::try_parse_from(["bot", "self-update", "--version", "1.2.3", "--check"]).unwrap();

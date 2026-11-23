@@ -7167,6 +7167,31 @@
         ]
       }
     },
+    "/v1/hosts/setup/bootstrap": {
+      "get": {
+        "tags": [
+          "host"
+        ],
+        "operationId": "hosts_setup_bootstrap",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapCommand"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/v1/hosts/setup/ssh-keys": {
       "get": {
         "tags": [
@@ -14408,6 +14433,36 @@
           "version": {
             "type": "string",
             "description": "Skill version string."
+          }
+        }
+      },
+      "BootstrapCommand": {
+        "type": "object",
+        "description": "`GET /v1/hosts/setup/bootstrap`: the one command to paste on a server.",
+        "required": [
+          "release_tag",
+          "command",
+          "ticket_minutes",
+          "published"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Text to paste into the server's web console or SSH session. It holds no\nsecret: the pairing code appears on the server after the install."
+          },
+          "published": {
+            "type": "boolean",
+            "description": "False for a development build: that release may not be published, so\nthe command can stop at the download."
+          },
+          "release_tag": {
+            "type": "string",
+            "description": "Release tag the command installs (the one this app was built from)."
+          },
+          "ticket_minutes": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How long the pairing code printed by the command stays valid.",
+            "minimum": 0
           }
         }
       },

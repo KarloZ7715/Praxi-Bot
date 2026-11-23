@@ -108,6 +108,21 @@ pub struct HostKeyAnswer {
     pub accept: bool,
 }
 
+/// `GET /v1/hosts/setup/bootstrap`: the one command to paste on a server.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct BootstrapCommand {
+    /// Release tag the command installs (the one this app was built from).
+    pub release_tag: String,
+    /// Text to paste into the server's web console or SSH session. It holds no
+    /// secret: the pairing code appears on the server after the install.
+    pub command: String,
+    /// How long the pairing code printed by the command stays valid.
+    pub ticket_minutes: u32,
+    /// False for a development build: that release may not be published, so
+    /// the command can stop at the download.
+    pub published: bool,
+}
+
 /// A private key file found in `~/.ssh` (path only).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SshKeyHint {
@@ -141,6 +156,8 @@ pub trait HostSetup: Send + Sync {
     fn answer_host_key(&self, id: &str, accept: bool) -> Result<HostSetupJob, HostSetupError>;
     fn cancel(&self, id: &str) -> Result<HostSetupJob, HostSetupError>;
     fn ssh_keys(&self) -> Vec<SshKeyHint>;
+    /// The one-command (no SSH, no key file) server setup text for this app's release.
+    fn bootstrap(&self) -> Result<BootstrapCommand, HostSetupError>;
 }
 
 impl From<HostSetupError> for ApiError {
@@ -259,4 +276,13 @@ pub(crate) async fn ssh_keys(
     Ok(Json(SshKeyList {
         keys: setup(&s)?.ssh_keys(),
     }))
+}
+
+#[utoipa::path(get, operation_id = "hosts_setup_bootstrap", path = "/v1/hosts/setup/bootstrap", tag = "host", security(("bearer" = [])), responses((status = 200, body = BootstrapCommand)))]
+pub(crate) async fn bootstrap(
+    State(s): State<AppState>,
+    peer: Option<Extension<crate::PeerIdentity>>,
+) -> Result<Json<BootstrapCommand>, ApiError> {
+    local_only(peer.as_ref())?;
+    Ok(Json(setup(&s)?.bootstrap()?))
 }

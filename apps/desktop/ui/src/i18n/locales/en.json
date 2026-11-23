@@ -61,12 +61,12 @@
       "title": "Checks before installing"
     },
     "choose": {
-      "home": "Use another computer at home",
-      "homeHint": "An old PC or mini PC that you leave switched on.",
-      "oracle": "Get a free always-on server",
-      "oracleHint": "A short guide to the Oracle Cloud free tier. Praxi never sees your account or password.",
-      "ssh": "I already have a server",
-      "sshHint": "You have its address and a key file to sign in (SSH).",
+      "have": "I have a server",
+      "haveHint": "Copy one line, paste it on the server, and paste the code it gives you back here.",
+      "local": "Run on this computer (recommended to start)",
+      "localHint": "Nothing to set up. Your bots already work here. You can add a server later.",
+      "need": "I need a server (free options, step by step)",
+      "needHint": "A short guide to get one: a free cloud server, a rented one, or a spare computer at home.",
       "title": "Which of these fits you?"
     },
     "connect": "Connect",
@@ -185,13 +185,98 @@
         "msg": "Nothing is listening on that port."
       }
     },
-    "home": {
-      "go": "I have the address",
-      "lead": "Any computer that stays on can be a server. Praxi works best with Ubuntu Linux 22.04 or newer on it.",
-      "one": "Install Ubuntu on that computer and turn on its SSH service (the package is called openssh-server).",
-      "three": "Find its address in your router device list; it looks like 192.168.1.20.",
-      "title": "Use another computer at home",
-      "two": "Plug it into your router with a cable if you can, and make sure it never goes to sleep."
+    "guide": {
+      "home": {
+        "card": "A spare computer at home",
+        "cardHint": "An old PC or mini PC that you leave switched on. No monthly cost.",
+        "lead": "Any computer that stays on can be a server. Praxi works best with Ubuntu Linux 22.04 or newer on it.",
+        "step": {
+          "internet": {
+            "body": "Plug it into your router with a cable if you can, and turn off sleep mode so it never goes to sleep.",
+            "title": "Keep it online"
+          },
+          "pc": {
+            "body": "It needs about 2 GB of memory and 10 GB of free disk, and should stay switched on.",
+            "title": "Pick the computer"
+          },
+          "terminal": {
+            "body": "On that computer, open the Terminal app. You will paste one line into it, so you do not need SSH or any key file.",
+            "title": "Open a terminal on it"
+          },
+          "ubuntu": {
+            "body": "Download Ubuntu Server or Desktop from ubuntu.com and follow its install guide. Choose a user name and password you will remember.",
+            "title": "Install Ubuntu on it"
+          }
+        },
+        "title": "Use a spare computer at home"
+      },
+      "oracle": {
+        "card": "Oracle Cloud free tier",
+        "cardHint": "A free always-on server. Takes about 20 minutes and needs a card to prove you are a person.",
+        "lead": "Do these steps in your web browser and tick each one when it is done.",
+        "step": {
+          "account": {
+            "body": "Go to oracle.com/cloud/free and sign up. A payment card only proves you are a person; the free tier is not charged.",
+            "title": "Create a free Oracle Cloud account"
+          },
+          "console": {
+            "body": "When the instance says Running, open its page and look for Console connection or Cloud Shell. Oracle's page explains the one-time setup there. You will paste one line into that window.",
+            "title": "Open its console"
+          },
+          "firewall": {
+            "body": "The default network already allows what Praxi needs. Do not change the network rules.",
+            "title": "Let it reach the internet"
+          },
+          "instance": {
+            "body": "In the console choose Compute, then Create instance. Pick Ubuntu 22.04 or newer and a shape marked Always Free. Let Oracle make the sign-in key; you will not need it.",
+            "title": "Create a virtual machine"
+          }
+        },
+        "title": "Get a free server from Oracle Cloud"
+      },
+      "privacy": "You do this on the provider's website. Praxi does not see your account, your password or your payment card.",
+      "ready": "My server is ready",
+      "vps": {
+        "card": "A rented server (any provider)",
+        "cardHint": "Hetzner, DigitalOcean, OVH and similar. A small one costs a few euros a month.",
+        "lead": "Any provider works if it offers Ubuntu 22.04 or newer. Praxi needs about 2 GB of memory and 10 GB of disk.",
+        "step": {
+          "console": {
+            "body": "On the server's page in the provider's website, look for a button named Console, Web console, VNC or Terminal. You will paste one line into it.",
+            "title": "Open its web console"
+          },
+          "create": {
+            "body": "Choose Ubuntu 22.04 or newer, at least 2 GB of memory, and the cheapest plan that fits. Ignore any option about SSH keys if you can.",
+            "title": "Create a server with Ubuntu"
+          },
+          "provider": {
+            "body": "Pick one you trust and create an account on its website.",
+            "title": "Choose a provider and sign up"
+          }
+        },
+        "title": "Rent a server from any provider"
+      }
+    },
+    "have": {
+      "advanced": "Advanced: connect over SSH",
+      "advancedBody": "For people who already sign in to their server with an SSH key file or agent. Most people do not need this.",
+      "advancedGo": "Use SSH instead",
+      "codeBad": "That is not a valid pairing code, or it has expired. Run the command again to get a new code, then paste it here.",
+      "codeHint": "It starts with bot-pair: . You can paste everything the console printed; Praxi finds the code.",
+      "codeLabel": "Pairing code from the server",
+      "commandLabel": "Command to run on the server",
+      "copied": "Command copied. Paste it into your server's console.",
+      "copy": "Copy command",
+      "devBuild": "This copy of Praxi is not an official release, so the server may not find version {{tag}}. If the command stops while downloading, update Praxi and try again.",
+      "loading": "Preparing your command…",
+      "noCommand": "The command could not be prepared",
+      "one": "Open your server's console or terminal (the provider's website has a Console or Terminal button).",
+      "pair": "Connect",
+      "pairing": "Connecting…",
+      "safe": "The command holds no password or key. The code it prints works once and expires after {{minutes}} minutes.",
+      "three": "When it finishes it prints a pairing code. Paste that code here.",
+      "title": "Connect your server with one command",
+      "two": "Copy the command below and paste it there. It installs Praxi and checks its signature first. It takes a few minutes."
     },
     "host": "Server address",
     "hostHint": "Example: 203.0.113.7 or myserver.example.com",
@@ -200,48 +285,60 @@
     "hostKeyTitle": "Is this your server?",
     "hostKeyYes": "Yes, trust this server",
     "intro": {
-      "go": "Set up a server",
-      "optional": "This is optional. Your bots already run on this computer. Add a server only if you want them to work around the clock.",
-      "optionalTitle": "You do not need one",
-      "skip": "No thanks, use this computer",
-      "title": "What is a server?",
-      "what": "A server is another computer that stays on day and night, usually rented online. Your bots can live there, so they keep working when your own computer is off."
+      "optional": "You do not need one: it is optional, and everything already works on this computer.",
+      "title": "Do you need a server?",
+      "what": "A server is another computer that stays on day and night, so your bots keep working even when your own computer is off."
     },
     "keyFile": "Private key file",
     "keyHint": "Only the path is used. Praxi never copies or stores the key itself.",
+    "keysFound": "Keys found on this computer",
     "lead": "Connect a server you rent. Praxi does the setup for you.",
+    "local": {
+      "body": "Your bots run on this computer. They work while the computer and Praxi are on. That is all you need to start.",
+      "done": "Got it",
+      "later": "If you later want your bots to work around the clock, open the computer menu and choose Add a server again.",
+      "title": "Good choice: nothing to set up"
+    },
     "logEmpty": "Nothing to show yet.",
     "manual": "I have a pairing ticket instead",
+    "need": {
+      "haveOne": "I already have one",
+      "lead": "Pick one. Each guide uses only the provider's own website; Praxi never sees your account, password or card.",
+      "title": "Get a server"
+    },
     "noDaemon": "The local Praxi service is not running. Restart the app and try again.",
     "noKeys": "No key file found in your .ssh folder. Type the path of the key file you downloaded.",
-    "oracle": {
-      "haveIt": "I have these details",
-      "lead": "Do these steps in your web browser, and tick each one when it is done. It takes about 20 minutes.",
-      "privacy": "You do all of this on the Oracle website. Praxi does not see your Oracle account, your password or your payment card.",
-      "ready": "All done, continue",
-      "step": {
-        "account": {
-          "body": "Go to oracle.com/cloud/free and sign up. A payment card is needed to prove you are a person; the free tier is not charged.",
-          "title": "Create a free Oracle Cloud account"
-        },
-        "address": {
-          "body": "When the instance says Running, copy its Public IP address. The user name is ubuntu.",
-          "title": "Copy the public address"
-        },
-        "firewall": {
-          "body": "The default network already allows port 22 (SSH). If you changed the rules, allow incoming TCP on port 22.",
-          "title": "Check that SSH is allowed"
-        },
-        "instance": {
-          "body": "In the console choose Compute, then Create instance. Pick the Ubuntu 22.04 or newer image and a shape marked Always Free.",
-          "title": "Create a virtual machine"
-        },
-        "ssh_key": {
-          "body": "In the instance form choose Generate a key pair and download the private key. Keep that file safe; you will pick it in the next step.",
-          "title": "Let Oracle make you a key"
-        }
+    "pairChecks": {
+      "models": {
+        "fix": "Not allowed yet. On the server, run: bot host admin --all-desktops . You can send models later from the server's page.",
+        "pass": "This app may send model keys to the server",
+        "pending": "Waiting",
+        "running": "Checking permission…",
+        "title": "Models can be sent"
       },
-      "title": "Get a free server from Oracle Cloud"
+      "reach": {
+        "fix": "Praxi could not reach it. Check that the server is on and has internet, then try again. If the code was already used, run the command again for a new one.",
+        "pass": "It answered",
+        "pending": "Waiting",
+        "running": "Calling the server…",
+        "title": "The server answers"
+      },
+      "ready": "Your server is connected and ready.",
+      "screen": {
+        "fix": "The server has no screen yet, so you cannot watch it, but bots still work. Run the command again to add one.",
+        "pass": "You can watch the server's screen",
+        "pending": "Waiting",
+        "running": "Looking for a screen…",
+        "title": "A screen to watch"
+      },
+      "title": "Checking your server",
+      "version": {
+        "fix": "The server runs a different version. It still works; to match it, run the command again on the server.",
+        "pass": "Both run the same version",
+        "pending": "Waiting",
+        "running": "Comparing versions…",
+        "title": "Same Praxi version"
+      }
     },
     "passwordNote": "Praxi signs in with a key file, not a password, so no password is ever typed, saved or sent. If your provider only gave you a password, create a key with your provider's help page first.",
     "port": "Port",
@@ -258,7 +355,6 @@
       "userInvalid": "Use letters, numbers, dots, dashes or underscores only."
     },
     "progress": "Setup progress",
-    "releaseNote": "For now the server must already have Praxi on it. Installing Praxi on a blank server for you is not available yet.",
     "retry": "Try again",
     "retryResume": "Try again from here",
     "sayHello": "Say hello to your bot",

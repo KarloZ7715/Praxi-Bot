@@ -742,6 +742,16 @@ impl crate::host_setup::HostSetup for FakeSetup {
     fn ssh_keys(&self) -> Vec<crate::host_setup::SshKeyHint> {
         Vec::new()
     }
+    fn bootstrap(
+        &self,
+    ) -> Result<crate::host_setup::BootstrapCommand, crate::host_setup::HostSetupError> {
+        Ok(crate::host_setup::BootstrapCommand {
+            release_tag: "v0.1.0".into(),
+            command: "echo hi".into(),
+            ticket_minutes: 30,
+            published: true,
+        })
+    }
 }
 
 #[tokio::test]
@@ -756,6 +766,7 @@ async fn server_setup_is_local_only_and_never_reaches_the_seam_from_a_peer() {
         (Method::POST, "/v1/hosts/setup/job-1/host-key"),
         (Method::POST, "/v1/hosts/setup/job-1/cancel"),
         (Method::GET, "/v1/hosts/setup/ssh-keys"),
+        (Method::GET, "/v1/hosts/setup/bootstrap"),
     ];
     for role in ROLES {
         for (method, path) in &routes {
@@ -775,6 +786,13 @@ async fn server_setup_is_local_only_and_never_reaches_the_seam_from_a_peer() {
     );
     assert_eq!(*setup_seam.starts.lock(), 1);
     assert_eq!(count_audit(&t, "host_setup.start"), 1);
+
+    // The one-command setup text is served to the local app only.
+    let r = call(&t, Method::GET, "/v1/hosts/setup/bootstrap", None).await;
+    assert_eq!(r.status, StatusCode::OK);
+    let v: Value = serde_json::from_slice(&r.body).unwrap();
+    assert_eq!(v["release_tag"], "v0.1.0");
+    assert_eq!(v["ticket_minutes"], 30);
 }
 
 /// Review blocker 1 (card 258-A): the general API token alone, and even a

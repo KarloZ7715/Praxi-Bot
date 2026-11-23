@@ -5,8 +5,19 @@ import { failure, stageStates, STAGES, type FailureCode, type StageState } from 
  * The guided "Add a server" wizard: which page is showing and what the person
  * typed. Pure functions only, so the whole flow is testable without a screen.
  */
-export type WizardPage = "intro" | "choose" | "oracle" | "home" | "details" | "run";
-export type ServerPath = "ssh" | "oracle" | "home";
+export type WizardPage =
+  | "intro"
+  | "local"
+  | "need"
+  | "oracle"
+  | "vps"
+  | "home"
+  | "have"
+  | "checks"
+  | "details"
+  | "run";
+/** What the person picked on the first screen. */
+export type ServerPath = "local" | "have" | "need";
 export type AuthMode = "key" | "agent";
 
 export interface WizardState {
@@ -17,7 +28,7 @@ export interface WizardState {
   port: string;
   auth: AuthMode;
   keyPath: string;
-  /** Oracle walkthrough checklist ticks (ids from ORACLE_STEPS). */
+  /** Guide checklist ticks (ids from GUIDE_STEPS), for the guide that is open. */
   oracleDone: string[];
 }
 
@@ -32,37 +43,62 @@ export const initialWizard: WizardState = {
   oracleDone: []
 };
 
+export type GuideId = "oracle" | "vps" | "home";
+
 export type WizardAction =
-  | { type: "next" }
-  | { type: "back" }
   | { type: "choose"; path: ServerPath }
+  | { type: "guide"; id: GuideId }
+  | { type: "have" }
+  | { type: "advanced" }
+  | { type: "back" }
   | { type: "set"; field: "host" | "user" | "port" | "keyPath"; value: string }
   | { type: "auth"; auth: AuthMode }
   | { type: "tick"; id: string }
   | { type: "run" }
+  | { type: "checks" }
   | { type: "edit" };
 
 /** Text steps of the free-server walkthrough (no screenshots; nothing secret is handled here). */
-export const ORACLE_STEPS = ["account", "instance", "ssh_key", "firewall", "address"] as const;
+export const ORACLE_STEPS = ["account", "instance", "firewall", "console"] as const;
+export const VPS_STEPS = ["provider", "create", "console"] as const;
+export const HOME_STEPS = ["pc", "ubuntu", "internet", "terminal"] as const;
+export const GUIDE_STEPS: Record<GuideId, readonly string[]> = {
+  oracle: ORACLE_STEPS,
+  vps: VPS_STEPS,
+  home: HOME_STEPS
+};
 
 export function wizardReducer(s: WizardState, a: WizardAction): WizardState {
   switch (a.type) {
-    case "next":
-      if (s.page === "intro") return { ...s, page: "choose" };
-      if (s.page === "oracle") return { ...s, page: "details", user: "ubuntu" };
-      return s;
     case "choose":
-      if (a.path === "oracle") return { ...s, path: a.path, page: "oracle", user: "ubuntu" };
-      if (a.path === "home") return { ...s, path: a.path, page: "home" };
-      return { ...s, path: a.path, page: "details" };
+      if (a.path === "local") return { ...s, path: a.path, page: "local" };
+      if (a.path === "have") return { ...s, path: a.path, page: "have" };
+      return { ...s, path: a.path, page: "need" };
+    case "guide":
+      return { ...s, page: a.id, oracleDone: [] };
+    case "have":
+      return { ...s, path: "have", page: "have" };
+    case "advanced":
+      return { ...s, page: "details" };
     case "back":
-      if (s.page === "choose") return { ...s, page: "intro" };
-      if (s.page === "oracle" || s.page === "home") return { ...s, page: "choose" };
-      if (s.page === "details") {
-        return { ...s, page: s.path === "oracle" ? "oracle" : s.path === "home" ? "home" : "choose" };
+      switch (s.page) {
+        case "local":
+        case "need":
+        case "have":
+          return { ...s, page: "intro" };
+        case "oracle":
+        case "vps":
+        case "home":
+          return { ...s, page: "need" };
+        case "details":
+          return { ...s, page: "have" };
+        case "run":
+          return { ...s, page: "details" };
+        case "checks":
+          return { ...s, page: "have" };
+        default:
+          return s;
       }
-      if (s.page === "run") return { ...s, page: "details" };
-      return s;
     case "set":
       return { ...s, [a.field]: a.value };
     case "auth":
@@ -76,20 +112,82 @@ export function wizardReducer(s: WizardState, a: WizardAction): WizardState {
       };
     case "run":
       return { ...s, page: "run" };
+    case "checks":
+      return { ...s, page: "checks" };
     case "edit":
       return { ...s, page: "details" };
   }
 }
 
-/** Number shown as "Step n of 4" (null: no counter on this page). */
+/** Pages worth coming back to after the dialog was closed (never one that holds a running job). */
+const RESUMABLE: readonly WizardPage[] = ["need", "oracle", "vps", "home", "have", "details"];
+const STORE_KEY = "praxi.addServer.v1";
+
+type KeyValueStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+function defaultStore(): KeyValueStore | null {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remember only where the person was and which guide boxes they ticked. Nothing typed
+ * (address, user, key path) and no pairing code is ever stored.
+ */
+export function saveWizard(s: WizardState, store: KeyValueStore | null = defaultStore()): void {
+  try {
+    if (!store) return;
+    if (!RESUMABLE.includes(s.page)) {
+      store.removeItem(STORE_KEY);
+      return;
+    }
+    store.setItem(STORE_KEY, JSON.stringify({ page: s.page, path: s.path, oracleDone: s.oracleDone }));
+  } catch {
+    /* storage can be blocked: the wizard just starts from the top next time */
+  }
+}
+
+export function clearWizard(store: KeyValueStore | null = defaultStore()): void {
+  try {
+    store?.removeItem(STORE_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+export function loadWizard(store: KeyValueStore | null = defaultStore()): WizardState {
+  try {
+    const raw = store?.getItem(STORE_KEY);
+    if (!raw) return initialWizard;
+    const v = JSON.parse(raw) as { page?: unknown; path?: unknown; oracleDone?: unknown };
+    const page = RESUMABLE.find((p) => p === v.page);
+    if (!page) return initialWizard;
+    const path = (["local", "have", "need"] as const).find((p) => p === v.path) ?? null;
+    const done = Array.isArray(v.oracleDone) ? v.oracleDone.filter((x): x is string => typeof x === "string").slice(0, 12) : [];
+    return { ...initialWizard, page, path, oracleDone: done };
+  } catch {
+    return initialWizard;
+  }
+}
+
+/** Which of the three progress dots is lit: 1 choose, 2 set up, 3 check (null: no dots). */
+export const TOTAL_STEPS = 3;
 export function stepNumber(page: WizardPage): number | null {
   switch (page) {
-    case "choose":
+    case "intro":
+    case "need":
       return 1;
+    case "local":
     case "oracle":
+    case "vps":
     case "home":
+    case "have":
     case "details":
       return 2;
+    case "checks":
     case "run":
       return 3;
     default:
@@ -150,6 +248,16 @@ export function checkForm(s: Pick<WizardState, "host" | "user" | "port" | "auth"
     key,
     ok: !hostProblem && !userProblem && !portProblem && !key
   };
+}
+
+/**
+ * The pairing code out of whatever was pasted: the server prints it among other
+ * lines (and a prompt after it). The code is one unbroken word. Returns null when
+ * there is no `bot-pair:` code in the text.
+ */
+export function extractTicket(text: string): string | null {
+  const m = /bot-pair:[A-Za-z2-7]+/.exec(text);
+  return m ? m[0] : null;
 }
 
 export function toInput(s: WizardState): StartHostSetupInput {

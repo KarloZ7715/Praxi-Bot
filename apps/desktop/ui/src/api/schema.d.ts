@@ -2016,6 +2016,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/hosts/setup/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["hosts_setup_bootstrap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/hosts/setup/ssh-keys": {
         parameters: {
             query?: never;
@@ -4156,6 +4172,26 @@ export interface components {
             scope: components["schemas"]["SkillScope"];
             /** @description Skill version string. */
             version: string;
+        };
+        /** @description `GET /v1/hosts/setup/bootstrap`: the one command to paste on a server. */
+        BootstrapCommand: {
+            /**
+             * @description Text to paste into the server's web console or SSH session. It holds no
+             *     secret: the pairing code appears on the server after the install.
+             */
+            command: string;
+            /**
+             * @description False for a development build: that release may not be published, so
+             *     the command can stop at the download.
+             */
+            published: boolean;
+            /** @description Release tag the command installs (the one this app was built from). */
+            release_tag: string;
+            /**
+             * Format: int32
+             * @description How long the pairing code printed by the command stays valid.
+             */
+            ticket_minutes: number;
         };
         /** @description `409` body of `PATCH /v1/bots/{id}`: the usual error plus the bot as stored now. */
         BotConflictBody: {
@@ -13825,6 +13861,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HostSetupJob"];
+                };
+            };
+        };
+    };
+    hosts_setup_bootstrap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BootstrapCommand"];
                 };
             };
         };

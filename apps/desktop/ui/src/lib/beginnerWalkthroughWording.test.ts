@@ -30,7 +30,6 @@ test("the disabled New schedule button says why, in every language", () => {
 
 test("the add-server wizard no longer shows developer wording", () => {
   const en = locale("en");
-  assert.doesNotMatch(at(en, "addServer.releaseNote"), /published release/i);
   assert.doesNotMatch(at(en, "addServer.lead"), /ticket/i);
   // The host key question explains what a fingerprint is before asking the user to compare it.
   assert.match(at(en, "addServer.hostKeyBody"), /code that identifies the server/);

@@ -4,54 +4,92 @@ A **server** is another computer that stays on day and night, usually rented onl
 
 **You do not need one.** Your bots already run on this computer. Add a server only if you want them to work around the clock.
 
-Open the computer menu at the top and choose **Add a server**. The wizard has three short steps.
+Open the computer menu at the top and choose **Add a server**. The first screen explains this in two sentences and offers three big choices. You can go back or close the window at any step; when you open it again it continues where you left off (it remembers only the page, never an address, a key or a code).
 
-## Step 1: choose what fits you
+## The three choices
 
-- **I already have a server.** You know its address and have a key file to sign in (SSH).
-- **Get a free always-on server.** A text guide for the Oracle Cloud free tier. You do everything on Oracle's own website; Praxi never sees your Oracle account, password or card.
-- **Use another computer at home.** An old PC or mini PC that stays on, ideally running Ubuntu 22.04 or newer with `openssh-server`.
+- **Run on this computer (recommended to start).** Nothing to set up.
+- **I have a server.** One command, no key files: see below.
+- **I need a server.** A plain-words guide with a checklist for three options: the Oracle Cloud free tier, a rented server from any provider, or a spare computer at home. You do everything on the provider's own website or on that computer. Praxi never sees your account, password or card.
+
+## I have a server: one command
+
+You do not need SSH, a key file or a terminal on your own computer.
+
+1. Open your server's **console or terminal**. Cloud providers have a button named Console, Web console or Terminal on the server's page. On a computer at home, open the Terminal app.
+2. In Praxi, press **Copy command** and paste it there. The command:
+   - makes sure the GitHub CLI (2.80 or newer) is installed, because it checks signatures;
+   - downloads the installer for **exactly the release this app was built from**;
+   - **verifies its signed build provenance** (the same check as in [Linux always-on host](linux-host.md) and [Release](release-linux.md)); if the check fails, nothing is installed;
+   - installs the always-on preset with a desktop session, and
+   - prints **one pairing code** that starts with `bot-pair:`.
+3. Paste the code into Praxi (you can paste everything the console printed; Praxi finds the code) and press **Connect**.
+
+The command contains no password, key or token of any kind. Only the release number is filled in. The pairing code is single-use, valid for 30 minutes, and can only pair one desktop; a wrong code is refused and an unused one expires on its own. Run the command again at any time to get a new code: it is safe to repeat.
+
+Then Praxi shows four live checks, each with a plain fix when something is off:
+
+| Check | Meaning | If it is not green |
+| --- | --- | --- |
+| The server answers | This app can talk to it | Make sure the server is on and online; get a new code if the old one was used |
+| Same Praxi version | Server and app run the same release | Run the command again on the server |
+| A screen to watch | The server has a desktop you can watch | Run the command again to add it; bots work without it |
+| Models can be sent | This app may send model keys to the server | On the server: `bot host admin --all-desktops` |
+
+Only a server that cannot be reached blocks you; the other three are advice.
+
+If you already have a pairing ticket (for example from `bot host invite --role desktop` on the server), use **I have a pairing ticket instead** at the bottom of the window.
+
+### On the server (for administrators)
+
+The command is the script `crates/host-provision/scripts/bootstrap.sh` with the release tag filled in, run through `bash -s`. It uses `bot host invite --role desktop --ttl-secs 1800 --ticket-only`, which prints only the ticket. Both options also work by hand. A build that is not an official release shows a warning, because its release may not be published.
+
+## I need a server
+
+Pick a card. Each guide is a short checklist of plain steps and ends with "My server is ready", which leads to the one-command page above.
 
 ### Oracle Cloud free tier, in short
 
-1. Create a free account at oracle.com/cloud/free (a card is needed to prove you are a person; the free tier is not charged).
+1. Create a free account at oracle.com/cloud/free (a card proves you are a person; the free tier is not charged).
 2. In the console choose Compute, then Create instance. Pick Ubuntu 22.04 or newer and a shape marked Always Free.
-3. Choose Generate a key pair and download the private key. Keep that file safe.
-4. Make sure incoming TCP on port 22 is allowed (the default network allows it).
-5. When the instance is Running, copy its Public IP. The user name is `ubuntu`.
+3. Leave the network rules as they are.
+4. When the instance is Running, open its **Console connection** or Cloud Shell and paste the command from Praxi.
 
-## Step 2: what Praxi needs
+### A rented server
+
+Any provider with Ubuntu 22.04 or newer works (about 2 GB of memory and 10 GB of disk). Create the server, open its web console and paste the command.
+
+### A spare computer at home
+
+Install Ubuntu 22.04 or newer, keep it on and online, open the Terminal app and paste the command.
+
+## Advanced: connect over SSH
+
+If you already sign in to your server with an SSH key file or agent, open **Advanced: connect over SSH** on the "I have a server" page. This is the older path and is never needed by beginners.
 
 - **Server address**, for example `203.0.113.7`. Do not type `ssh://` or `user@`.
-- **User**, `ubuntu` on Ubuntu images, `opc` on Oracle Linux.
-- **Key file** (or your SSH agent). Only the path is used; the key is never copied or stored. Praxi does not use passwords, so no password is typed, saved or sent. If your provider only gave you a password, create a key with your provider's help page first.
+- **User**: `ubuntu` on Ubuntu images, `opc` on Oracle Linux.
+- **Key file** or your SSH agent. The key files found on this computer are listed under **Keys found on this computer**; none is chosen for you, and only the path is used. The key is never copied or stored. Praxi does not use passwords.
 - **Advanced**: the port (almost always 22).
 
-Typing mistakes are explained as you type (a `.pub` file instead of the private key, a `:port` glued to the address, and so on).
+Praxi shows a checklist (the server answers, signing in works, the system is supported, enough memory and disk, network and ports), asks you once to confirm the server's fingerprint, installs Praxi if needed and pairs.
 
-## Step 3: checks, install, done
+Common messages:
 
-Praxi shows a checklist: the server answers, signing in works, the system is supported, enough memory and disk, network and ports. A problem shows what to do next. The first time you connect, you confirm the server's fingerprint; compare it with your provider's console if it shows one.
-
-A progress bar and an expandable technical log show the install. **Try again from here** repeats the run and skips what is already in place; **Cancel** lets the running step finish first.
-
-When it is done, pick the server in the computer menu to chat with its bots, watch its screen and open its terminal.
+| Message | What it means | Fix |
+| --- | --- | --- |
+| The server did not accept your key | "permission denied (publickey)" | Check the user name, pick the key that belongs to this server |
+| Your key file is readable by other people | The key file is too open | Mac/Linux: `chmod 600 <key file>`. Windows: Properties, Security, leave only your own user |
+| This key is locked with a passphrase | Praxi cannot type it | Unlock it with `ssh-add` and choose SSH agent |
+| The server did not answer in time | Port 22 is probably blocked | Allow incoming TCP on port 22 in your provider's firewall |
+| The server said no to the connection | The SSH service is not running | `sudo systemctl start ssh` |
 
 ## Your servers
 
 Computer menu, **Your servers**, lists every server with its state. **Remove** forgets the server on this computer only. The server itself, its bots and its files are not touched and keep running; you can add it again later.
 
-## Fixing common problems
-
-| Message | What it means | Fix |
-| --- | --- | --- |
-| The server did not accept your key | "permission denied (publickey)" | Check the user name, pick the key that belongs to this server, make sure it was added when the server was created. |
-| Your key file is readable by other people | The key file is too open | Mac/Linux: `chmod 600 <key file>`. Windows: Properties, Security, leave only your own user. |
-| This key is locked with a passphrase | Praxi cannot type it | Unlock it with `ssh-add` and choose SSH agent, or use a key without a passphrase. |
-| The server did not answer in time | Port 22 is probably blocked | Allow incoming TCP on port 22 in your provider's firewall and use the public address. |
-| The server said no to the connection | The SSH service is not running | `sudo systemctl start ssh`, or reinstall `openssh-server`. |
-
 ## Limits today
 
-- Installing Praxi for you needs a published release; until then the server must already run Praxi.
-- There is no clock-sync check yet, and no one-click update; update from the server's terminal with `sudo bash ./install-linux.sh --update` (see [Linux always-on host](linux-host.md); your data is kept).
+- Installing Praxi needs a published release of the same version as your app; a development build shows a warning.
+- The server needs outgoing internet access to github.com, systemd, and Ubuntu 22.04 or newer (or a recent Oracle Linux / Fedora family system).
+- There is no one-click update; update from the server's terminal with `sudo bash ./install-linux.sh --update` (see [Linux always-on host](linux-host.md); your data is kept).

@@ -61,12 +61,12 @@
       "title": "Kurulumdan önceki kontroller"
     },
     "choose": {
-      "home": "Evdeki başka bir bilgisayarı kullan",
-      "homeHint": "Sürekli açık bırakacağın eski bir PC ya da mini PC.",
-      "oracle": "Ücretsiz, hep açık bir sunucu al",
-      "oracleHint": "Oracle Cloud ücretsiz katmanı için kısa bir rehber. Praxi hesabını ya da şifreni asla görmez.",
-      "ssh": "Zaten bir sunucum var",
-      "sshHint": "Adresini ve giriş için bir anahtar dosyasını (SSH) biliyorsun.",
+      "have": "Bir sunucum var",
+      "haveHint": "Tek satırı kopyala, sunucuda yapıştır, verdiği kodu buraya yapıştır.",
+      "local": "Bu bilgisayarda çalıştır (başlamak için önerilir)",
+      "localHint": "Kurulacak bir şey yok. Botların burada zaten çalışıyor. Sunucuyu sonra ekleyebilirsin.",
+      "need": "Sunucuya ihtiyacım var (ücretsiz seçenekler, adım adım)",
+      "needHint": "Sunucu edinmek için kısa rehber: ücretsiz bulut sunucusu, kiralık sunucu veya evdeki boş bir bilgisayar.",
       "title": "Hangisi sana uyuyor?"
     },
     "connect": "Bağlan",
@@ -185,13 +185,98 @@
         "msg": "Bu portta dinleyen bir şey yok."
       }
     },
-    "home": {
-      "go": "Adresi buldum",
-      "lead": "Sürekli açık kalan her bilgisayar sunucu olabilir. Praxi, Ubuntu Linux 22.04 veya daha yenisiyle en iyi çalışır.",
-      "one": "O bilgisayara Ubuntu kur ve SSH hizmetini aç (paketin adı openssh-server).",
-      "three": "Adresini modemin cihaz listesinden bul; 192.168.1.20 gibi görünür.",
-      "title": "Evdeki başka bir bilgisayarı kullan",
-      "two": "Mümkünse kabloyla modeme bağla ve asla uyku moduna girmediğinden emin ol."
+    "guide": {
+      "home": {
+        "card": "Evdeki boş bir bilgisayar",
+        "cardHint": "Sürekli açık bırakacağın eski bir PC ya da mini PC. Aylık ücreti yok.",
+        "lead": "Sürekli açık kalan her bilgisayar sunucu olabilir. Praxi, Ubuntu Linux 22.04 veya daha yenisiyle en iyi çalışır.",
+        "step": {
+          "internet": {
+            "body": "Mümkünse kabloyla modeme bağla ve uyku modunu kapat ki asla uyumasın.",
+            "title": "Çevrimiçi kalsın"
+          },
+          "pc": {
+            "body": "Yaklaşık 2 GB belleğe ve 10 GB boş diske ihtiyacı var; açık kalmalı.",
+            "title": "Bilgisayarı seç"
+          },
+          "terminal": {
+            "body": "O bilgisayarda Terminal uygulamasını aç. Ona tek satır yapıştıracaksın; SSH ya da anahtar dosyası gerekmez.",
+            "title": "Üzerinde bir terminal aç"
+          },
+          "ubuntu": {
+            "body": "ubuntu.com adresinden Ubuntu Server veya Desktop'u indir ve kurulum rehberini izle. Unutmayacağın bir kullanıcı adı ve şifre seç.",
+            "title": "Üzerine Ubuntu kur"
+          }
+        },
+        "title": "Evdeki boş bir bilgisayarı kullan"
+      },
+      "oracle": {
+        "card": "Oracle Cloud ücretsiz katmanı",
+        "cardHint": "Ücretsiz, hep açık sunucu. Yaklaşık 20 dakika sürer; gerçek biri olduğunu doğrulamak için kart ister.",
+        "lead": "Bu adımları web tarayıcında yap ve bitirdikçe işaretle.",
+        "step": {
+          "account": {
+            "body": "oracle.com/cloud/free adresine git ve kaydol. Kart yalnızca gerçek biri olduğunu doğrular; ücretsiz katmandan para çekilmez.",
+            "title": "Ücretsiz bir Oracle Cloud hesabı aç"
+          },
+          "console": {
+            "body": "Makine Running olunca sayfasını aç ve Console connection veya Cloud Shell'i bul. Oracle'ın sayfası oradaki tek seferlik kurulumu anlatır. O pencereye tek satır yapıştıracaksın.",
+            "title": "Konsolunu aç"
+          },
+          "firewall": {
+            "body": "Varsayılan ağ Praxi'nin ihtiyacı olanı zaten sağlıyor. Ağ kurallarını değiştirme.",
+            "title": "İnternete çıkabilsin"
+          },
+          "instance": {
+            "body": "Konsolda Compute, sonra Create instance'ı seç. Ubuntu 22.04 veya daha yenisini ve Always Free işaretli bir şekil seç. Giriş anahtarını Oracle'a ürettir; ona ihtiyacın olmayacak.",
+            "title": "Bir sanal makine oluştur"
+          }
+        },
+        "title": "Oracle Cloud'dan ücretsiz sunucu al"
+      },
+      "privacy": "Bunu sağlayıcının sitesinde yaparsın. Praxi hesabını, şifreni veya ödeme kartını görmez.",
+      "ready": "Sunucum hazır",
+      "vps": {
+        "card": "Kiralık sunucu (herhangi bir sağlayıcı)",
+        "cardHint": "Hetzner, DigitalOcean, OVH ve benzerleri. Küçük bir sunucu ayda birkaç euro tutar.",
+        "lead": "Ubuntu 22.04 veya daha yenisini sunan her sağlayıcı olur. Praxi yaklaşık 2 GB bellek ve 10 GB disk ister.",
+        "step": {
+          "console": {
+            "body": "Sağlayıcının sitesinde sunucunun sayfasında Console, Web console, VNC veya Terminal adlı bir düğme ara. Ona tek satır yapıştıracaksın.",
+            "title": "Web konsolunu aç"
+          },
+          "create": {
+            "body": "Ubuntu 22.04 veya daha yenisini, en az 2 GB belleği ve uyan en ucuz planı seç. Mümkünse SSH anahtarı seçeneklerini boş geç.",
+            "title": "Ubuntu'lu bir sunucu oluştur"
+          },
+          "provider": {
+            "body": "Güvendiğin birini seç ve sitesinde hesap aç.",
+            "title": "Bir sağlayıcı seç ve kaydol"
+          }
+        },
+        "title": "Herhangi bir sağlayıcıdan sunucu kirala"
+      }
+    },
+    "have": {
+      "advanced": "Gelişmiş: SSH ile bağlan",
+      "advancedBody": "Sunucusuna zaten SSH anahtar dosyası ya da ajanıyla giren kişiler için. Çoğu kişiye bu gerekmez.",
+      "advancedGo": "Bunun yerine SSH kullan",
+      "codeBad": "Bu geçerli bir eşleştirme kodu değil ya da süresi dolmuş. Yeni kod için komutu yeniden çalıştır, sonra buraya yapıştır.",
+      "codeHint": "bot-pair: ile başlar. Konsolun yazdığı her şeyi yapıştırabilirsin; Praxi kodu bulur.",
+      "codeLabel": "Sunucudan gelen eşleştirme kodu",
+      "commandLabel": "Sunucuda çalıştırılacak komut",
+      "copied": "Komut kopyalandı. Sunucunun konsoluna yapıştır.",
+      "copy": "Komutu kopyala",
+      "devBuild": "Praxi'nin bu kopyası resmi bir sürüm değil; sunucu {{tag}} sürümünü bulamayabilir. Komut indirirken durursa Praxi'yi güncelle ve yeniden dene.",
+      "loading": "Komutun hazırlanıyor…",
+      "noCommand": "Komut hazırlanamadı",
+      "one": "Sunucunun konsolunu veya terminalini aç (sağlayıcının sitesinde Console ya da Terminal düğmesi vardır).",
+      "pair": "Bağlan",
+      "pairing": "Bağlanıyor…",
+      "safe": "Komutta şifre ya da anahtar yok. Yazdırdığı kod bir kez çalışır ve {{minutes}} dakika sonra geçersiz olur.",
+      "three": "Bitince bir eşleştirme kodu yazdırır. O kodu buraya yapıştır.",
+      "title": "Sunucunu tek komutla bağla",
+      "two": "Aşağıdaki komutu kopyala ve oraya yapıştır. Praxi'yi kurar ve önce imzasını denetler. Birkaç dakika sürer."
     },
     "host": "Sunucu adresi",
     "hostHint": "Örnek: 203.0.113.7 veya sunucum.example.com",
@@ -200,48 +285,60 @@
     "hostKeyTitle": "Bu senin sunucun mu?",
     "hostKeyYes": "Evet, bu sunucuya güven",
     "intro": {
-      "go": "Sunucu kur",
-      "optional": "Bu isteğe bağlıdır. Botların zaten bu bilgisayarda çalışıyor. Sunucuyu yalnızca botların 7/24 çalışsın istiyorsan ekle.",
-      "optionalTitle": "Sunucuya ihtiyacın yok",
-      "skip": "Hayır, bu bilgisayarı kullan",
-      "title": "Sunucu nedir?",
-      "what": "Sunucu, gece gündüz açık duran başka bir bilgisayardır; genellikle internetten kiralanır. Botların orada yaşayabilir, böylece kendi bilgisayarın kapalıyken de çalışmaya devam ederler."
+      "optional": "Sunucuya ihtiyacın yok: isteğe bağlıdır ve her şey bu bilgisayarda zaten çalışıyor.",
+      "title": "Sunucuya ihtiyacın var mı?",
+      "what": "Sunucu, gece gündüz açık duran başka bir bilgisayardır; kendi bilgisayarın kapalıyken de botların çalışmaya devam eder."
     },
     "keyFile": "Özel anahtar dosyası",
     "keyHint": "Yalnızca yol kullanılır. Praxi anahtarın kendisini kopyalamaz ve saklamaz.",
+    "keysFound": "Bu bilgisayarda bulunan anahtarlar",
     "lead": "Kiraladığın bir sunucuya bağlan. Kurulumu Praxi senin yerine yapar.",
+    "local": {
+      "body": "Botların bu bilgisayarda çalışır. Bilgisayar ve Praxi açıkken çalışırlar. Başlamak için gereken tek şey bu.",
+      "done": "Anladım",
+      "later": "İleride botların 7/24 çalışsın istersen bilgisayar menüsünü aç ve yeniden Sunucu ekle'yi seç.",
+      "title": "İyi seçim: kurulacak bir şey yok"
+    },
     "logEmpty": "Henüz gösterilecek bir şey yok.",
     "manual": "Bunun yerine eşleştirme biletim var",
+    "need": {
+      "haveOne": "Zaten bir sunucum var",
+      "lead": "Birini seç. Her rehber yalnızca sağlayıcının kendi sitesini kullanır; Praxi hesabını, şifreni veya kartını asla görmez.",
+      "title": "Sunucu edin"
+    },
     "noDaemon": "Yerel Praxi servisi çalışmıyor. Uygulamayı yeniden başlatıp yeniden dene.",
     "noKeys": ".ssh klasöründe anahtar dosyası bulunamadı. İndirdiğin anahtar dosyasının yolunu yaz.",
-    "oracle": {
-      "haveIt": "Bilgilerim hazır",
-      "lead": "Bu adımları web tarayıcında yap ve bitirdikçe işaretle. Yaklaşık 20 dakika sürer.",
-      "privacy": "Bunların hepsini Oracle'ın kendi sitesinde yaparsın. Praxi Oracle hesabını, şifreni ve kartını görmez.",
-      "ready": "Hepsi tamam, devam et",
-      "step": {
-        "account": {
-          "body": "oracle.com/cloud/free adresine git ve kaydol. Gerçek biri olduğunu doğrulamak için kart istenir; ücretsiz katmandan para çekilmez.",
-          "title": "Ücretsiz bir Oracle Cloud hesabı aç"
-        },
-        "address": {
-          "body": "Makine Running olunca Public IP adresini kopyala. Kullanıcı adı ubuntu'dur.",
-          "title": "Açık adresi kopyala"
-        },
-        "firewall": {
-          "body": "Varsayılan ağ 22 numaralı bağlantı noktasına (SSH) zaten izin verir. Kuralları değiştirdiysen 22 numaralı TCP girişine izin ver.",
-          "title": "SSH'ye izin verildiğini kontrol et"
-        },
-        "instance": {
-          "body": "Konsolda Compute, sonra Create instance seç. Ubuntu 22.04 veya daha yeni imajı ve Always Free yazan bir şekil seç.",
-          "title": "Bir sanal makine oluştur"
-        },
-        "ssh_key": {
-          "body": "Form içinde Generate a key pair seçip özel anahtarı indir. Bu dosyayı sakla; sonraki adımda seçeceksin.",
-          "title": "Oracle sana bir anahtar üretsin"
-        }
+    "pairChecks": {
+      "models": {
+        "fix": "Henüz izin yok. Sunucuda şunu çalıştır: bot host admin --all-desktops . Modelleri sonra sunucunun sayfasından gönderebilirsin.",
+        "pass": "Bu uygulama sunucuya model anahtarı gönderebilir",
+        "pending": "Bekliyor",
+        "running": "İzin denetleniyor…",
+        "title": "Modeller gönderilebilir"
       },
-      "title": "Oracle Cloud'dan ücretsiz sunucu al"
+      "reach": {
+        "fix": "Praxi ona ulaşamadı. Sunucunun açık ve internete bağlı olduğunu kontrol et, sonra yeniden dene. Kod zaten kullanıldıysa yeni bir kod için komutu yeniden çalıştır.",
+        "pass": "Yanıt verdi",
+        "pending": "Bekliyor",
+        "running": "Sunucu aranıyor…",
+        "title": "Sunucu yanıt veriyor"
+      },
+      "ready": "Sunucun bağlandı ve hazır.",
+      "screen": {
+        "fix": "Sunucunun henüz ekranı yok, bu yüzden izleyemezsin ama botlar yine çalışır. Eklemek için komutu yeniden çalıştır.",
+        "pass": "Sunucunun ekranını izleyebilirsin",
+        "pending": "Bekliyor",
+        "running": "Ekran aranıyor…",
+        "title": "İzlenecek bir ekran"
+      },
+      "title": "Sunucun denetleniyor",
+      "version": {
+        "fix": "Sunucu farklı bir sürüm çalıştırıyor. Yine de çalışır; eşitlemek için komutu sunucuda yeniden çalıştır.",
+        "pass": "İkisi de aynı sürümü çalıştırıyor",
+        "pending": "Bekliyor",
+        "running": "Sürümler karşılaştırılıyor…",
+        "title": "Aynı Praxi sürümü"
+      }
     },
     "passwordNote": "Praxi şifreyle değil anahtar dosyasıyla giriş yapar; yani hiçbir şifre yazılmaz, kaydedilmez ya da gönderilmez. Sağlayıcın sana yalnızca şifre verdiyse, önce sağlayıcının yardım sayfasından bir anahtar oluştur.",
     "port": "Port",
@@ -258,7 +355,6 @@
       "userInvalid": "Yalnızca harf, rakam, nokta, tire veya alt çizgi kullan."
     },
     "progress": "Kurulum ilerlemesi",
-    "releaseNote": "Şimdilik sunucuda Praxi'nin kurulu olması gerekir. Boş bir sunucuya senin için Praxi kurmak henüz mümkün değil.",
     "retry": "Yeniden dene",
     "retryResume": "Buradan yeniden dene",
     "sayHello": "Botuna merhaba de",

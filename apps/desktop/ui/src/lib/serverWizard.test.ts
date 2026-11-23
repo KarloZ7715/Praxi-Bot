@@ -5,9 +5,12 @@ import {
   checkForm,
   checklist,
   diagnose,
+  extractTicket,
   initialWizard,
+  loadWizard,
   logLines,
   progressPercent,
+  saveWizard,
   wizardReducer,
   type WizardState
 } from "./serverWizard.ts";
@@ -33,17 +36,44 @@ const job = (state: HostSetupJob["state"], steps: HostSetupStep[]): HostSetupJob
 });
 const run = (s: WizardState, ...a: Parameters<typeof wizardReducer>[1][]) => a.reduce(wizardReducer, s);
 
-test("the wizard explains first, offers three paths and can always go back", () => {
-  let s = run(initialWizard, { type: "next" });
-  assert.equal(s.page, "choose");
-  s = run(s, { type: "choose", path: "oracle" });
+test("the first screen offers three paths and every page can go back", () => {
+  assert.equal(initialWizard.page, "intro");
+  assert.equal(run(initialWizard, { type: "choose", path: "local" }).page, "local");
+  let s = run(initialWizard, { type: "choose", path: "need" });
+  assert.equal(s.page, "need");
+  s = run(s, { type: "guide", id: "oracle" });
   assert.equal(s.page, "oracle");
-  s = run(s, { type: "next" });
+  assert.equal(run(s, { type: "back" }).page, "need");
+  s = run(s, { type: "have" });
+  assert.equal(s.page, "have");
+  s = run(s, { type: "advanced" });
   assert.equal(s.page, "details");
-  assert.equal(run(s, { type: "back" }).page, "oracle");
-  assert.equal(run(initialWizard, { type: "next" }, { type: "choose", path: "ssh" }).page, "details");
-  assert.equal(run(initialWizard, { type: "next" }, { type: "choose", path: "home" }).page, "home");
+  assert.equal(run(s, { type: "back" }).page, "have");
   assert.equal(run(s, { type: "run" }, { type: "back" }).page, "details");
+  assert.equal(run(s, { type: "back" }, { type: "back" }).page, "intro");
+  assert.equal(run(initialWizard, { type: "choose", path: "have" }, { type: "checks" }, { type: "back" }).page, "have");
+});
+
+test("the dialog resumes where it was closed and never stores what was typed", () => {
+  const mem = new Map<string, string>();
+  const store = {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => void mem.set(k, v),
+    removeItem: (k: string) => void mem.delete(k)
+  };
+  const typed = { ...initialWizard, page: "details" as const, host: "203.0.113.7", keyPath: "/home/me/.ssh/id", oracleDone: ["account"] };
+  saveWizard(typed, store);
+  const saved = [...mem.values()].join("");
+  assert.ok(!saved.includes("203.0.113.7") && !saved.includes(".ssh"));
+  const back = loadWizard(store);
+  assert.equal(back.page, "details");
+  assert.equal(back.host, "");
+  assert.deepEqual(back.oracleDone, ["account"]);
+  // a page that holds a running job is never restored; broken storage starts from the top
+  saveWizard({ ...typed, page: "run" }, store);
+  assert.equal(loadWizard(store).page, "intro");
+  mem.set("praxi.addServer.v1", "{not json");
+  assert.equal(loadWizard(store).page, "intro");
 });
 
 test("live validation catches the usual typing mistakes with a specific reason", () => {
@@ -90,4 +120,11 @@ test("progress only goes up with finished rows and never claims 100 before succe
   assert.ok(b > a && b < 100);
   assert.equal(progressPercent(job("succeeded", [])), 100);
   assert.deepEqual(logLines(job("running", [step("connect", "pass", "ok")])), ["[pass] connect: ok"]);
+});
+
+test("the pairing code is found among other pasted console lines", () => {
+  assert.equal(extractTicket("[praxi] DONE.\n\nbot-pair:MFRGG2LTNBSWY3DP\n\nubuntu@vm:~$ "), "bot-pair:MFRGG2LTNBSWY3DP");
+  assert.equal(extractTicket("  bot-pair:ABC234  "), "bot-pair:ABC234");
+  assert.equal(extractTicket("sudo bash -s"), null);
+  assert.equal(extractTicket(""), null);
 });

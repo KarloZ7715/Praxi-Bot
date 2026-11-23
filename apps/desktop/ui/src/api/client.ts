@@ -63,7 +63,9 @@ import type {
   GrantTarget,
   Health,
   HostLinkConnection,
+  BootstrapCommand,
   HostLinkInfo,
+  HostStatus,
   PcRequestList,
   HostSetupJob,
   SshKeyHint,
@@ -640,6 +642,14 @@ export class ApiClient {
   }
   cancelHostSetup(job: string): Promise<HostSetupJob> {
     return this.request("POST", `/hosts/setup/${encodeURIComponent(job)}/cancel`);
+  }
+  /** The one command to paste on a server (no SSH details, no key file): installs and prints a pairing code. */
+  hostBootstrap(): Promise<BootstrapCommand> {
+    return this.request("GET", "/hosts/setup/bootstrap");
+  }
+  /** What a host says about itself (call on a client connected to the HOST). */
+  hostStatus(): Promise<HostStatus> {
+    return this.request("GET", "/host");
   }
   /** Private key files found in `~/.ssh` (paths only). */
   async listSshKeys(): Promise<SshKeyHint[]> {

@@ -6,8 +6,10 @@ import {
   CircleX,
   Cloud,
   Copy,
+  Globe,
   House,
   KeyRound,
+  Laptop,
   Loader2,
   Monitor,
   Server,
@@ -16,8 +18,9 @@ import {
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "ui";
+import { ApiClient, ApiError } from "../api/client";
 import { isMockMode } from "../api/mockMode";
-import type { HostSetupJob, SshKeyHint, StartHostSetupInput } from "../api/types";
+import type { BootstrapCommand, HostSetupJob, SshKeyHint, StartHostSetupInput } from "../api/types";
 import {
   afterKeyAnswer,
   copyDetails,
@@ -26,16 +29,22 @@ import {
   stageStates,
   wizardView
 } from "../lib/hostSetup";
+import { checksDone, runPairChecks, type PairCheckRow, type ServerProbe } from "../lib/serverChecks";
 import {
   checkForm,
   checklist,
+  clearWizard,
   diagnose,
+  extractTicket,
+  GUIDE_STEPS,
   initialWizard,
+  loadWizard,
   logLines,
-  ORACLE_STEPS,
   progressPercent,
+  saveWizard,
   stepNumber,
   toInput,
+  TOTAL_STEPS,
   wizardReducer,
   type CheckState,
   type WizardState,
@@ -82,11 +91,19 @@ export function AddServerModal({
 function Content({ onClose, onManual }: { onClose: () => void; onManual: () => void }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const { client, localApi, refreshHosts, selectComputer } = useDaemon();
+  const { client, localApi, refreshHosts, selectComputer, pairHost } = useDaemon();
   // The wizard always talks to THIS computer's daemon, never to a selected host.
   const api = isMockMode() ? client : localApi;
 
-  const [w, dispatch] = useReducer(wizardReducer, initialWizard);
+  const [w, dispatch] = useReducer(wizardReducer, initialWizard, () => loadWizard());
+  const [boot, setBoot] = useState<BootstrapCommand | null>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootTry, setBootTry] = useState(0);
+  const [code, setCode] = useState("");
+  const [pairing, setPairing] = useState(false);
+  const [pairError, setPairError] = useState<string | null>(null);
+  const [paired, setPaired] = useState<string | null>(null);
+  const [rows, setRows] = useState<PairCheckRow[]>([]);
   const [keys, setKeys] = useState<SshKeyHint[]>([]);
   const [job, setJob] = useState<HostSetupJob | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -130,8 +147,8 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
       ?.listSshKeys()
       .then((k) => {
         if (live) {
+          // Shown as a choice only, never preselected: these are the person's own files.
           setKeys(k);
-          if (k[0]) dispatch({ type: "set", field: "keyPath", value: k[0].path });
         }
       })
       .catch(() => undefined);
@@ -139,6 +156,68 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
       live = false;
     };
   }, [api]);
+
+  // Come back to the same page after the dialog was closed (see saveWizard for what is kept).
+  useEffect(() => {
+    saveWizard(w);
+  }, [w]);
+
+  // The one command for "I have a server": built by this computer's daemon for this app's release.
+  const onHave = w.page === "have";
+  useEffect(() => {
+    if (!onHave || boot || !api) return undefined;
+    let live = true;
+    setBootError(null);
+    api
+      .hostBootstrap()
+      .then((b) => {
+        if (live) setBoot(b);
+      })
+      .catch((e: unknown) => {
+        if (live) setBootError(humanLine(e));
+      });
+    return () => {
+      live = false;
+    };
+  }, [onHave, boot, api, bootTry]);
+
+  const runChecks = useCallback(
+    async (id: string) => {
+      if (!api) return;
+      let conn: { base_url: string; token: string } | null = null;
+      const probe: ServerProbe = {
+        connect: async () => {
+          conn = await api.connectHost(id);
+        },
+        status: async () => {
+          const st = await (isMockMode() || !conn ? api : new ApiClient(conn)).hostStatus();
+          return { version: st.version, hasDisplay: st.has_display };
+        },
+        localVersion: async () => (await api.listHosts()).local_version,
+        canSendModels: async () => Boolean((await api.copyPlan(id)).host_accepts)
+      };
+      await runPairChecks(probe, setRows);
+    },
+    [api]
+  );
+
+  const pairWithCode = async () => {
+    const ticket = extractTicket(code);
+    if (!ticket || pairing) return;
+    setPairing(true);
+    setPairError(null);
+    try {
+      const info = await pairHost(ticket);
+      setCode("");
+      setPaired(info.id);
+      dispatch({ type: "checks" });
+      void runChecks(info.id);
+    } catch (e) {
+      setPairError(e instanceof ApiError && e.status === 400 ? t("addServer.have.codeBad") : humanLine(e));
+    } finally {
+      setPairing(false);
+    }
+  };
 
   // Poll while the job is active.
   useEffect(() => {
@@ -229,7 +308,7 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
   const view = w.page === "run" ? wizardView(job) : "form";
   const hasScreen = (job?.view_targets ?? 0) > 0;
   const n = stepNumber(w.page);
-  const subtitle = job && w.page === "run" ? job.target : n ? t("addServer.stepOf", { n, total: 3 }) : t("addServer.lead");
+  const subtitle = job && w.page === "run" ? job.target : n ? t("addServer.stepOf", { n, total: TOTAL_STEPS }) : t("addServer.lead");
   const back = (
     <Button variant="ghost" onClick={() => dispatch({ type: "back" })} data-testid="add-server-back">
       <ArrowLeft aria-hidden="true" />
@@ -252,37 +331,26 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
       />
       {/* Announces "Step 2 of 3" (or the server being set up) when the page changes. */}
       <p className={dialog.visuallyHidden} role="status" data-testid="add-server-live">{subtitle}</p>
+      {n ? (
+        <div className={styles.dots} aria-hidden="true" data-testid="add-server-dots">
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+            <span key={i} className={styles.dot} data-on={i + 1 <= n} />
+          ))}
+        </div>
+      ) : null}
 
       {w.page === "intro" ? (
         <>
           <div className={dialog.body}>
             <h3 className={styles.pageTitle}>{t("addServer.intro.title")}</h3>
             <p className={styles.para}>{t("addServer.intro.what")}</p>
-            <Callout tone="info" title={t("addServer.intro.optionalTitle")}>
-              {t("addServer.intro.optional")}
-            </Callout>
-          </div>
-          <DialogFooter note={manualLink}>
-            <Button variant="ghost" onClick={onClose} data-testid="add-server-skip">
-              {t("addServer.intro.skip")}
-            </Button>
-            <Button variant="primary" onClick={() => dispatch({ type: "next" })} data-testid="add-server-next">
-              {t("addServer.intro.go")}
-            </Button>
-          </DialogFooter>
-        </>
-      ) : null}
-
-      {w.page === "choose" ? (
-        <>
-          <div className={dialog.body}>
-            <h3 className={styles.pageTitle}>{t("addServer.choose.title")}</h3>
+            <p className={styles.para}>{t("addServer.intro.optional")}</p>
             <div className={styles.choices} role="group" aria-label={t("addServer.choose.title")}>
               {(
                 [
-                  ["ssh", <KeyRound key="k" aria-hidden="true" />],
-                  ["oracle", <Cloud key="c" aria-hidden="true" />],
-                  ["home", <House key="h" aria-hidden="true" />]
+                  ["local", <Laptop key="l" aria-hidden="true" />],
+                  ["have", <Server key="s" aria-hidden="true" />],
+                  ["need", <Cloud key="c" aria-hidden="true" />]
                 ] as const
               ).map(([id, icon]) => (
                 <button
@@ -301,17 +369,82 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
               ))}
             </div>
           </div>
-          <DialogFooter note={manualLink}>{back}</DialogFooter>
+          <DialogFooter note={manualLink}>
+            <Button variant="ghost" onClick={onClose} data-testid="add-server-skip">
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
         </>
       ) : null}
 
-      {w.page === "oracle" ? (
+      {w.page === "local" ? (
         <>
           <div className={dialog.body}>
-            <h3 className={styles.pageTitle}>{t("addServer.oracle.title")}</h3>
-            <p className={styles.para}>{t("addServer.oracle.lead")}</p>
+            <h3 className={styles.pageTitle}>{t("addServer.local.title")}</h3>
+            <p className={styles.para}>{t("addServer.local.body")}</p>
+            <Callout tone="info">{t("addServer.local.later")}</Callout>
+          </div>
+          <DialogFooter>
+            {back}
+            <Button
+              variant="primary"
+              onClick={() => {
+                clearWizard();
+                onClose();
+              }}
+              data-testid="add-server-local-done"
+            >
+              {t("addServer.local.done")}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : null}
+
+      {w.page === "need" ? (
+        <>
+          <div className={dialog.body}>
+            <h3 className={styles.pageTitle}>{t("addServer.need.title")}</h3>
+            <p className={styles.para}>{t("addServer.need.lead")}</p>
+            <div className={styles.choices} role="group" aria-label={t("addServer.need.title")}>
+              {(
+                [
+                  ["oracle", <Cloud key="c" aria-hidden="true" />],
+                  ["vps", <Globe key="g" aria-hidden="true" />],
+                  ["home", <House key="h" aria-hidden="true" />]
+                ] as const
+              ).map(([id, icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={styles.choice}
+                  data-testid={`guide-${id}`}
+                  onClick={() => dispatch({ type: "guide", id })}
+                >
+                  <span className={styles.choiceIcon}>{icon}</span>
+                  <span className={styles.stageText}>
+                    <b>{t(`addServer.guide.${id}.card`)}</b>
+                    <small>{t(`addServer.guide.${id}.cardHint`)}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter note={manualLink}>
+            {back}
+            <Button variant="ghost" onClick={() => dispatch({ type: "have" })} data-testid="need-have-one">
+              {t("addServer.need.haveOne")}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : null}
+
+      {w.page === "oracle" || w.page === "vps" || w.page === "home" ? (
+        <>
+          <div className={dialog.body}>
+            <h3 className={styles.pageTitle}>{t(`addServer.guide.${w.page}.title`)}</h3>
+            <p className={styles.para}>{t(`addServer.guide.${w.page}.lead`)}</p>
             <ol className={styles.guide}>
-              {ORACLE_STEPS.map((id) => {
+              {GUIDE_STEPS[w.page].map((id) => {
                 const on = w.oracleDone.includes(id);
                 return (
                   <li key={id} className={styles.guideItem} data-on={on}>
@@ -320,44 +453,154 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
                         type="checkbox"
                         checked={on}
                         onChange={() => dispatch({ type: "tick", id })}
-                        data-testid={`oracle-${id}`}
+                        data-testid={`guide-step-${id}`}
                       />
                       <span className={styles.stageText}>
-                        <b>{t(`addServer.oracle.step.${id}.title`)}</b>
-                        <small>{t(`addServer.oracle.step.${id}.body`)}</small>
+                        <b>{t(`addServer.guide.${w.page}.step.${id}.title`)}</b>
+                        <small>{t(`addServer.guide.${w.page}.step.${id}.body`)}</small>
                       </span>
                     </label>
                   </li>
                 );
               })}
             </ol>
-            <Callout tone="info">{t("addServer.oracle.privacy")}</Callout>
+            <Callout tone="info">{t("addServer.guide.privacy")}</Callout>
           </div>
           <DialogFooter>
             {back}
-            <Button variant="primary" onClick={() => dispatch({ type: "next" })} data-testid="add-server-next">
-              {w.oracleDone.length === ORACLE_STEPS.length ? t("addServer.oracle.ready") : t("addServer.oracle.haveIt")}
+            <Button variant="primary" onClick={() => dispatch({ type: "have" })} data-testid="guide-ready">
+              {t("addServer.guide.ready")}
             </Button>
           </DialogFooter>
         </>
       ) : null}
 
-      {w.page === "home" ? (
+      {w.page === "have" ? (
         <>
           <div className={dialog.body}>
-            <h3 className={styles.pageTitle}>{t("addServer.home.title")}</h3>
-            <p className={styles.para}>{t("addServer.home.lead")}</p>
+            <h3 className={styles.pageTitle}>{t("addServer.have.title")}</h3>
             <ol className={styles.numbered}>
-              {(["one", "two", "three"] as const).map((k) => (
-                <li key={k}>{t(`addServer.home.${k}`)}</li>
+              <li>{t("addServer.have.one")}</li>
+              <li>{t("addServer.have.two")}</li>
+              <li>{t("addServer.have.three")}</li>
+            </ol>
+            {boot ? (
+              <div className={styles.cmdBox}>
+                <pre className={styles.cmd} tabIndex={0} aria-label={t("addServer.have.commandLabel")} data-testid="bootstrap-command">
+                  {boot.command}
+                </pre>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(boot.command)
+                      .then(() => toast.show(t("addServer.have.copied"), "success"))
+                      .catch(() => toast.show(t("addServer.copyFailed"), "danger"));
+                  }}
+                  data-testid="bootstrap-copy"
+                >
+                  <Copy aria-hidden="true" />
+                  {t("addServer.have.copy")}
+                </Button>
+              </div>
+            ) : bootError ? (
+              <Callout tone="danger" role="alert" title={t("addServer.have.noCommand")}>
+                {bootError}{" "}
+                <button type="button" className={styles.link} onClick={() => setBootTry((n) => n + 1)}>
+                  {t("addServer.retry")}
+                </button>
+              </Callout>
+            ) : (
+              <p className={styles.note} role="status">
+                {t("addServer.have.loading")}
+              </p>
+            )}
+            {boot && !boot.published ? <Callout tone="warning">{t("addServer.have.devBuild", { tag: boot.release_tag })}</Callout> : null}
+            <p className={styles.note}>{t("addServer.have.safe", { minutes: boot?.ticket_minutes ?? 30 })}</p>
+            <Field label={t("addServer.have.codeLabel")} htmlFor="as-code" hint={t("addServer.have.codeHint")}>
+              <textarea
+                id="as-code"
+                className={`${form.textarea} ${styles.mono}`}
+                rows={3}
+                value={code}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="bot-pair:…"
+                data-testid="pair-code"
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setPairError(null);
+                }}
+              />
+            </Field>
+            {pairError ? (
+              <p className={form.error} role="alert" data-testid="pair-error">
+                {pairError}
+              </p>
+            ) : null}
+            <details className={styles.advanced} data-testid="advanced-ssh">
+              <summary>{t("addServer.have.advanced")}</summary>
+              <p className={styles.note}>{t("addServer.have.advancedBody")}</p>
+              <Button variant="ghost" onClick={() => dispatch({ type: "advanced" })} data-testid="advanced-ssh-go">
+                <KeyRound aria-hidden="true" />
+                {t("addServer.have.advancedGo")}
+              </Button>
+            </details>
+          </div>
+          <DialogFooter note={manualLink}>
+            {back}
+            <Button
+              variant="primary"
+              disabled={pairing || !extractTicket(code)}
+              onClick={() => void pairWithCode()}
+              data-testid="pair-submit"
+            >
+              {pairing ? t("addServer.have.pairing") : t("addServer.have.pair")}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : null}
+
+      {w.page === "checks" ? (
+        <>
+          <div className={dialog.body}>
+            <h3 className={styles.pageTitle}>{t("addServer.pairChecks.title")}</h3>
+            <ol className={styles.stages} aria-label={t("addServer.pairChecks.title")} data-testid="pair-checks">
+              {rows.map(({ id, state }) => (
+                <li key={id} className={styles.stage} data-state={state === "pass" ? "done" : state} data-testid={`pair-check-${id}`}>
+                  <span className={styles.stageIcon}>
+                    <CheckIcon state={state} />
+                  </span>
+                  <span className={styles.stageText}>
+                    <b>{t(`addServer.pairChecks.${id}.title`)}</b>
+                    <small>{t(`addServer.pairChecks.${id}.${state === "fail" || state === "warn" ? "fix" : state}`)}</small>
+                  </span>
+                </li>
               ))}
             </ol>
+            {checksDone(rows) ? <Callout tone="success">{t("addServer.pairChecks.ready")}</Callout> : null}
           </div>
           <DialogFooter>
             {back}
-            <Button variant="primary" onClick={() => dispatch({ type: "choose", path: "ssh" })}>
-              {t("addServer.home.go")}
-            </Button>
+            {rows[0]?.state === "fail" ? (
+              <Button variant="primary" onClick={() => paired && void runChecks(paired)} data-testid="pair-checks-retry">
+                {t("addServer.retry")}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                disabled={!checksDone(rows)}
+                onClick={() => {
+                  if (paired) void selectComputer(paired);
+                  clearWizard();
+                  onClose();
+                }}
+                data-testid="pair-checks-use"
+              >
+                <Server aria-hidden="true" />
+                {t("addServer.useServer")}
+              </Button>
+            )}
           </DialogFooter>
         </>
       ) : null}
@@ -426,7 +669,8 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
                 error={touched || w.keyPath ? problemText(t, check.key) : undefined}
               >
                 {keys.length > 0 ? (
-                  <div className={styles.keys} role="radiogroup" aria-label={t("addServer.keyFile")}>
+                  <div className={styles.keys} role="radiogroup" aria-label={t("addServer.keysFound")}>
+                    <span className={styles.note}>{t("addServer.keysFound")}</span>
                     {keys.map((k) => (
                       <button
                         key={k.path}
@@ -460,7 +704,6 @@ function Content({ onClose, onManual }: { onClose: () => void; onManual: () => v
               <Callout tone="info">{t("addServer.agentHint")}</Callout>
             )}
             <Callout tone="info">{t("addServer.passwordNote")}</Callout>
-            <Callout tone="info">{t("addServer.releaseNote")}</Callout>
             <details className={styles.advanced}>
               <summary>{t("addServer.advanced")}</summary>
               <Field

@@ -24,8 +24,8 @@ use std::{
 use daemon_api::{
     host_links::{HostLinkError, HostLinks},
     host_setup::{
-        HostKeyPrompt, HostSetup, HostSetupError, HostSetupJob, HostSetupState, HostSetupStep,
-        HostSetupStepStatus, SshKeyHint, StartHostSetupInput,
+        BootstrapCommand, HostKeyPrompt, HostSetup, HostSetupError, HostSetupJob, HostSetupState,
+        HostSetupStep, HostSetupStepStatus, SshKeyHint, StartHostSetupInput,
     },
 };
 use host_provision::{
@@ -237,6 +237,31 @@ impl HostSetup for CliHostSetup {
     fn ssh_keys(&self) -> Vec<SshKeyHint> {
         ssh_key_hints()
     }
+
+    fn bootstrap(&self) -> Result<BootstrapCommand, HostSetupError> {
+        bootstrap_for(option_env!("PRAXI_RELEASE_TAG"), env!("CARGO_PKG_VERSION"))
+    }
+}
+
+/// The paste-on-the-server command for the release this app was built from.
+/// A build without a release tag still gets a command (the tag derived from
+/// its version), flagged as not published so the app can say so.
+fn bootstrap_for(
+    release_tag: Option<&str>,
+    app_version: &str,
+) -> Result<BootstrapCommand, HostSetupError> {
+    let published = release_tag.is_some_and(|t| !t.is_empty());
+    let tag = release_tag.filter(|t| !t.is_empty()).unwrap_or(app_version);
+    let tag = host_provision::validate::version_tag(tag)
+        .map_err(|e| HostSetupError::Invalid(e.to_string()))?;
+    let command = host_provision::remote::bootstrap_command(&tag)
+        .map_err(|e| HostSetupError::Invalid(e.to_string()))?;
+    Ok(BootstrapCommand {
+        release_tag: tag,
+        command,
+        ticket_minutes: 30,
+        published,
+    })
 }
 
 /// Private key files in `~/.ssh` (name and path only; at most the first line
@@ -559,6 +584,19 @@ impl LocalHost for SetupLocal {
 mod tests {
     use super::*;
     use host_provision::{ScannedKey, Status as _Status};
+
+    #[test]
+    fn bootstrap_uses_the_release_tag_and_flags_a_development_build() {
+        let rel = bootstrap_for(Some("v1.2.3"), "9.9.9").unwrap();
+        assert_eq!((rel.release_tag.as_str(), rel.published), ("v1.2.3", true));
+        assert!(rel.command.contains(
+            "PRAXI_TAG=v1.2.3
+"
+        ));
+        let dev = bootstrap_for(None, "0.1.0").unwrap();
+        assert_eq!((dev.release_tag.as_str(), dev.published), ("v0.1.0", false));
+        assert!(bootstrap_for(Some("v1; rm -rf /"), "0.1.0").is_err());
+    }
 
     const ED: &str = "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
 

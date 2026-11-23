@@ -20,6 +20,12 @@ pub enum HostCmd {
         /// Role for the invited device.
         #[arg(long, value_parser = ["phone", "desktop", "node", "host"])]
         role: String,
+        /// How long the invite stays valid, in seconds (1 to 1800).
+        #[arg(long)]
+        ttl_secs: Option<u64>,
+        /// Print only the pairing ticket (for scripts such as the one-command server setup).
+        #[arg(long)]
+        ticket_only: bool,
     },
     /// Show host ownership, peer status, and capabilities (JSON).
     Status,
@@ -77,6 +83,15 @@ pub enum HostCmd {
     /// Provision your own server over SSH: add, repair, upgrade, remove.
     #[command(flatten)]
     Provision(crate::host_provision::ProvisionCmd),
+}
+
+/// Request body of `POST /v1/host/invite`.
+fn invite_body(role: &str, ttl_secs: Option<u64>) -> serde_json::Value {
+    let mut body = json!({"role": role});
+    if let Some(ttl) = ttl_secs {
+        body["ttl_secs"] = json!(ttl);
+    }
+    body
 }
 
 /// Device keys a `host screen` command applies to.
@@ -228,10 +243,10 @@ pub async fn run(
     }
     let (method, path, body) = match action {
         HostCmd::Status | HostCmd::Devices => (Method::GET, "/v1/host".into(), None),
-        HostCmd::Invite { role } => (
+        HostCmd::Invite { role, ttl_secs, .. } => (
             Method::POST,
             "/v1/host/invite".into(),
-            Some(json!({"role": role})),
+            Some(invite_body(role, *ttl_secs)),
         ),
         HostCmd::Revoke { key } => {
             let key = peer_network::key_from_string(key).map_err(|e| {
@@ -271,7 +286,13 @@ pub async fn run(
     if matches!(action, HostCmd::Devices) {
         response = response["peers"].clone();
     }
-    if !json_output && matches!(action, HostCmd::Invite { .. }) {
+    if let HostCmd::Invite {
+        ticket_only: true, ..
+    } = action
+    {
+        let invite: daemon_api::host::HostInvite = serde_json::from_value(response)?;
+        writeln!(out, "{}", invite.ticket)?;
+    } else if !json_output && matches!(action, HostCmd::Invite { .. }) {
         let invite: daemon_api::host::HostInvite = serde_json::from_value(response)?;
         let qr = qrcode::QrCode::new(invite.ticket.as_bytes())?;
         writeln!(
@@ -375,6 +396,15 @@ mod tests {
     use super::*;
     use daemon_api::host::{HostConfig, HostState};
     use peer_network::{PeerConfig, RelayConfig};
+
+    #[test]
+    fn invite_options_reach_the_request_and_default_to_no_ttl() {
+        assert_eq!(
+            invite_body("desktop", Some(1800)),
+            json!({"role": "desktop", "ttl_secs": 1800})
+        );
+        assert_eq!(invite_body("host", None), json!({"role": "host"}));
+    }
 
     async fn daemon(data: &Path, epoch: u64) -> (daemon_api::AppState, PeerNetwork) {
         HostConfig {
