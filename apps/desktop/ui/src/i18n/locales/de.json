@@ -2781,8 +2781,8 @@
       "title": "Das Modell konnte nicht antworten"
     },
     "network": {
-      "hint": "Er startet möglicherweise noch. Praxi versucht es von selbst erneut; du kannst den Dienst auch neu starten.",
-      "title": "Praxi kann seinen lokalen Dienst nicht erreichen"
+      "hint": "Nichts von deinen Eingaben geht verloren. Praxi versucht es weiter; drücke die Schaltfläche erneut, sobald der Hinweis oben verschwunden ist.",
+      "title": "Der lokale Dienst antwortet gerade nicht"
     },
     "noInputBackend": {
       "hint": "Der Host hat für diesen Bildschirm keinen Tastatur- und Maus-Zugriff (zum Beispiel ein Server ohne Desktop-Sitzung). Du kannst zusehen, aber nicht übernehmen.",
@@ -4441,6 +4441,23 @@
     },
     "title": "Deine Server",
     "updateHelp": "Um einen Server zu aktualisieren, öffne sein Terminal und führe dort das Praxi-Update aus. Ein Update mit einem Klick gibt es noch nicht."
+  },
+  "service": {
+    "copied": "Diagnoseinfos kopiert.",
+    "copy": "Diagnoseinfos kopieren",
+    "copyFailed": "Kopieren nicht möglich. Versuche es erneut.",
+    "failed": {
+      "hint": "Der Hintergrunddienst von Praxi antwortet nicht mehr. Deine ungespeicherten Eingaben bleiben erhalten. Starte den Dienst unten neu; falls es weiter scheitert, kopiere die Diagnoseinfos und sende sie an den Support.",
+      "title": "Der lokale Dienst ist nicht zurückgekehrt"
+    },
+    "reconnecting": {
+      "hint": "Das dauert meist nur wenige Sekunden. Schaltflächen, die den Dienst brauchen, warten; deine Eingaben bleiben erhalten.",
+      "title": "Verbindung zum lokalen Dienst wird wiederhergestellt …"
+    },
+    "starting": {
+      "hint": "Praxi macht sich bereit. Nach einem Update oder Neustart kann das einen Moment dauern.",
+      "title": "Der lokale Dienst wird gestartet …"
+    }
   },
   "settings": {
     "accent": {

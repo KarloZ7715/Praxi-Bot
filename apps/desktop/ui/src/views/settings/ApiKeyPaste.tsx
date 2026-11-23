@@ -19,6 +19,7 @@ import styles from "./AiPage.module.css";
 import { humanLine } from "../../lib/humanError";
 import { useBotsHome } from "../../state/useBotsHome";
 import { HomeHint } from "../../components/HomeHint";
+import { useServiceState } from "../../state/ServiceState";
 import { ConnectionTestButton } from "../../components/ConnectionTest";
 
 /** Open the collapsed "advanced providers" block (custom OpenAI-compatible servers). */
@@ -45,6 +46,7 @@ export function ApiKeyPaste() {
   const { t } = useTranslation();
   const toast = useToast();
   const { client, conn } = useDaemon();
+  const serviceBlocked = useServiceState().blocked;
   const mock = client?.baseUrl === MOCK_BASE_URL;
   const providerTarget = { connection: conn, baseUrl: client?.baseUrl };
   const home = useBotsHome();
@@ -133,7 +135,7 @@ export function ApiKeyPaste() {
           <button
             type="submit"
             className={`${styles.pill} ${styles.pillPri}`}
-            disabled={!target || busy || !client || !canConfigure}
+            disabled={!target || busy || !client || !canConfigure || serviceBlocked}
           >
             {target
               ? t("settingsModal.ai.keys.addTo", { provider: target.id })
