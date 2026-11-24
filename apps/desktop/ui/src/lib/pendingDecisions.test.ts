@@ -75,5 +75,5 @@ test("the chat pins the cards its timeline cannot draw and names what it waits f
   assert.match(chat, /pendingForChat\(needs, events/);
   // the status line is fed by the cards, not by the run state alone
   assert.match(chat, /const askedHere = pending\.own\.length > 0/);
-  assert.match(chat, /t\("runStatus\.waiting", \{ step: toolSentence\(t, firstPending\.tool\) \}\)/);
+  assert.match(chat, /t\("runStatus\.waiting", \{/);
 });

@@ -299,6 +299,9 @@ fn host_local_denial(method: &Method, check_path: &str) -> Option<&'static str> 
     if check_path == "/v1/profile-share" || check_path.starts_with("/v1/profile-share/") {
         return Some("bot profile files are handled by the owner on this host only");
     }
+    if under(check_path, "/v1/favicons") {
+        return Some("site icons are fetched for the local owner only");
+    }
     if check_path == "/v1/data-usage" || check_path.starts_with("/v1/data-usage/") {
         return Some("data folder sizes and Clear cache are a host-local owner action");
     }
@@ -684,6 +687,16 @@ mod tests {
                     "{method} {path}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn peers_never_fetch_favicons() {
+        for method in [Method::GET, Method::HEAD, Method::POST] {
+            assert!(
+                host_local_denial(&method, "/v1/favicons/example.com").is_some(),
+                "{method}"
+            );
         }
     }
 

@@ -23,6 +23,7 @@ use crate::email;
 use crate::email_routes;
 use crate::embeddings_routes;
 use crate::error;
+use crate::favicon;
 use crate::file_access;
 use crate::fill_routes;
 use crate::host;
@@ -142,6 +143,7 @@ impl Modify for Security {
         email_routes::test_email_draft,
         email_routes::update_email_account,
         events_doc,
+        favicon::get_favicon,
         file_access::get_files,
         file_access::put_files,
         fill_routes::create_fill_grant,

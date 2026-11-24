@@ -1841,6 +1841,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/favicons/{domain}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's favicon, from the local cache or fetched directly from `https://<domain>` (never a
+         *     third-party favicon service) when that host is already allowed for a bot. Owner-only.
+         *     Returns `404` when unavailable or not allowed so the UI falls back to a globe or letter tile.
+         */
+        get: operations["get_favicon"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fill-grants": {
         parameters: {
             query?: never;
@@ -14348,6 +14369,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SseStatus"];
+                };
+            };
+        };
+    };
+    get_favicon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public site domain */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Favicon image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

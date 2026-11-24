@@ -112,7 +112,7 @@ import { AttachmentDraft } from "../lib/attachmentDraft";
 import { ComposerFiles } from "../components/Attachments";
 import { enqueue, putBack, removeQueued, takeForNow, takeForRunEnd } from "../lib/messageQueue";
 import { groupPending, isBatchable, shouldBatch } from "../lib/approvalBatch";
-import { toolSentence } from "../lib/runSentence";
+import { approvalHeadline, type T as PlainT } from "../lib/approvalPlain";
 import { useChatQueue } from "../state/useChatQueue";
 import {
   giveBackControl,
@@ -1189,12 +1189,21 @@ export function ChatView({
     });
     barDetail = t(`${label.key}.${stepPhase(liveTool.status)}`, label.values);
   }
+  const decisions = useDecisionActions();
   const firstPending = pending.own[0];
-  // The status line says WHAT the run waits for ("Waiting for your approval: Opening example.com").
+  // The status line says WHAT the run waits for ("Waiting for your approval: Open example.com").
   const approvalText = waitLost
     ? t("runStatus.waitLost")
     : firstPending?.tool
-      ? t("runStatus.waiting", { step: toolSentence(t, firstPending.tool) })
+      ? t("runStatus.waiting", {
+          step: approvalHeadline(
+            firstPending.tool.name,
+            firstPending.tool.input,
+            firstPending.tool.details,
+            { computer: null, serverName: decisions.serverName },
+            t as unknown as PlainT
+          )
+        })
       : firstPending?.question
         ? t("runStatus.waitAnswer", { question: firstPending.question.question.slice(0, 80) })
         : null;
@@ -1206,7 +1215,6 @@ export function ChatView({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     el?.scrollIntoView({ block: "center", behavior: instant ? "instant" : "smooth" });
   };
-  const decisions = useDecisionActions();
   const barBotName =
     control.bot && control.bot.botId !== chat?.bot_id
       ? control.bot.botName

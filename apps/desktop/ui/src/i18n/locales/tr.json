@@ -1484,6 +1484,23 @@
         "tools": "Araçlar"
       },
       "commandShortened": "Komut kısaltıldı: yalnızca ilk {{shown}} karakter gösteriliyor.",
+      "compact": {
+        "allow": "İzin ver",
+        "alwaysSite": "Her zaman izin ver",
+        "alwaysTool": "Her zaman izin ver",
+        "controlGrant": "Ekran ve klavye kontrolünü paylaş",
+        "deletePath": "{{path}} öğesini sil",
+        "openSite": "{{site}} sitesini aç",
+        "openSite_idn": "{{site}} sitesini aç (uluslararası adres, dikkatle kontrol et)",
+        "openSite_mixed": "{{site}} sitesini aç (farklı alfabeleri karıştırıyor, başka bir siteyi taklit edebilir)",
+        "runCommand": "Çalıştır: {{command}}",
+        "schedule": {
+          "create": "Zamanlama oluştur: \"{{name}}\"",
+          "delete": "Zamanlamayı sil: \"{{name}}\"",
+          "edit": "Zamanlamayı güncelle: \"{{name}}\""
+        },
+        "sendMail": "{{to}} adresine e-posta gönder"
+      },
       "computer": "Bu işlem {{kind}} “{{name}}” üzerinde çalışır (kimlik {{id}}).",
       "control": {
         "button": "Bu görev: {{program}}",
@@ -5169,8 +5186,9 @@
     },
     "permissions": {
       "description": "Her botun şu an neler yapabileceği; onay kartlarından verdiğin “Her zaman izin ver” kuralları dahil.",
-      "grantCategory": "Her {{name}} aracına her zaman izin ver",
-      "grantScoped": "{{tool}} aracına {{target}} için her zaman izin ver",
+      "grantCategory": "Kategori: {{name}}",
+      "grantScoped": "{{tool}} ({{scope}})",
+      "grantSite": "{{site}} sitesini her zaman aç",
       "grantTool": "{{name}} için her zaman izin ver",
       "inertGrant": "Etkin değil: bu kural bir bilgisayara bağlı değil ve artık uygulanmıyor.",
       "mode": "Mod: {{mode}}",
@@ -5203,6 +5221,10 @@
       "defaultModel": "Varsayılan model",
       "description": "API anahtarları işletim sistemi anahtarlığında saklanır. Değişiklikleri arka plan servisi yeniden başlatmadan alır.",
       "disabled": "Devre dışı",
+      "keyHelp": {
+        "mistral": "Mistral, La Plateforme'dan (console.mistral.ai) alınan bir API anahtarı ister. Le Chat sohbet aboneliği bir API anahtarı değildir ve burada çalışmaz.",
+        "open": "Mistral anahtarı oluştur"
+      },
       "keyHint": "Anahtar sistem anahtarlığına gönderilir ve bir daha gösterilmez.",
       "keyStored": "anahtar kayıtlı",
       "localDaemonOnly": "Sağlayıcı kurulumu, bu uygulamanın başlattığı yerel arka plan servisi için kullanılabilir. Diğer bağlantılarda sağlayıcıları arka plan servisinin çalıştığı bilgisayarda yönet.",
@@ -5731,6 +5753,11 @@
       "providers": "Bunu yalnızca sana kesin bilgi verildiyse değiştir. Yanlış bir giriş botlarının yanıt vermesini durdurabilir."
     },
     "safety": {
+      "allowedGrants": {
+        "description": "Botların her seferinde sormadan kullanabildiği siteler ve araçlar. Tekrar sorulması için izni kaldırabilirsiniz.",
+        "empty": "Henüz kalıcı site veya işlem izni yok. Buraya eklemek için onay kartında \"Her zaman izin ver\"i seçin.",
+        "title": "İzin verilen siteler ve işlemler"
+      },
       "custom": "Özel kuralların var (Gelişmiş’e bak). Onların yerine geçmesi için bir seviye seç.",
       "description": "Botlarına ne kadar serbestlik vereceğini seç. İstediğin zaman değiştirebilirsin.",
       "lead": "Bir seviye seç. Kendi kuralını vermediğin her bot buna uyar.",

@@ -343,6 +343,8 @@ export async function flows(ctx) {
     await sendLines(page, ['call:web_search {"query":"smoke untrusted"}', `call:shell_run ${JSON.stringify({ command: 'echo smoke-two' })}`]);
     const card = cards(page).first();
     await card.waitFor(T);
+    const details = card.getByTestId('approval-details');
+    if (await details.count()) await details.locator('summary').click();
     const why = ((await card.getByTestId('approval-why').textContent().catch(() => '')) ?? '').trim();
     if (!/untrusted/i.test(why)) throw new Error(`the card does not say why: "${why}"`);
     await card.getByRole('button', { name: /this chat/i }).click();
@@ -350,7 +352,7 @@ export async function flows(ctx) {
     await sendLines(page, [`call:shell_run ${JSON.stringify({ command: 'echo smoke-three' })}`]);
     await page.getByText(/tool said: .*smoke-three/).first().waitFor(SLOW);
     // Answered cards stay in the timeline; only a card that still waits has its buttons.
-    if ((await page.getByRole('button', { name: /allow once/i }).count()) > 0) throw new Error('the second shell call asked again after "This chat"');
+    if ((await page.getByRole('button', { name: /allow once|^allow$/i }).count()) > 0) throw new Error('the second shell call asked again after "This chat"');
   });
   await run(s, 'human-driving latch: banner, "Give control back", then an observation tool works', async (page) => {
     // A fresh page: with the live-view side panel open the viewer shows its own controls instead of the banner.
@@ -486,7 +488,7 @@ export async function flows(ctx) {
     const command = `${windows ? '&' : 'exec'} ${[process.execPath, holdScript, pidFile].map(quote).join(' ')}`;
     await sendLines(page, [`call:shell_run ${JSON.stringify({ command })}`, `call:shell_run ${JSON.stringify({ command: 'echo must-not-run' })}`]);
     // Depending on the chat's prior grant, the fixture command can start or ask first.
-    const allow = cards(page).getByRole('button', { name: /^allow once$/i });
+    const allow = cards(page).getByRole('button', { name: /allow once|^allow$/i });
     const readPid = () => existsSync(pidFile) ? Number(readFileSync(pidFile, 'utf8')) : 0;
     const started = await until('hold process starts or asks for approval', async () => readPid() || await allow.isVisible(), 60000);
     if (started === true) await allow.click();

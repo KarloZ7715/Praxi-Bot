@@ -361,6 +361,9 @@ pub(crate) fn make_loop(
         config,
     );
     lp.add_profile(bot, prof);
+    lp.sh
+        .legacy_always
+        .store(true, std::sync::atomic::Ordering::Relaxed);
     lp
 }
 
@@ -1774,11 +1777,16 @@ async fn schedule_runs_never_skip_the_money_floor_even_with_a_full_policy_and_gr
         unreachable!()
     };
     assert_eq!(pay.count.load(Ordering::SeqCst), 0);
-    lp.approve(a.call_id, ApprovalScope::Always, env.user)
+    assert_eq!(a.details.as_ref().unwrap()["always_offered"], false);
+    assert!(matches!(
+        lp.approve(a.call_id, ApprovalScope::Always, env.user),
+        Err(crate::LoopError::OnceOnly(_))
+    ));
+    lp.approve(a.call_id, ApprovalScope::Once, env.user)
         .unwrap();
     assert_eq!(lp.wait(run).await.unwrap(), RunState::Succeeded);
     assert_eq!(pay.count.load(Ordering::SeqCst), 1);
-    // The "always" grant does not waive the floor on the next firing.
+    // Money never stops asking on the next firing.
     let run2 = lp
         .run_scheduled(env.chat, protocol::TaskId::new(), tool_work("t.pay"))
         .unwrap();

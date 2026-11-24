@@ -865,7 +865,8 @@ mod tests {
         let (bot, chat) = setup_bot_and_chat(&c, dir.path()).await;
         let mut out = Vec::new();
 
-        // An approval with the new scope creates a category grant.
+        // "Always allow" for a category or tool is refused for a file write: only a site (and
+        // listed read-only tools) can be remembered, so no grant appears.
         let target = dir.path().join("x.txt");
         let msg = format!(
             "call:fs_write {}",
@@ -879,28 +880,26 @@ mod tests {
             }
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
         };
-        approve(
-            &c,
-            &call_id,
-            "always_category",
-            false,
-            None,
-            false,
-            &mut out,
-        )
-        .await
-        .unwrap();
+        for scope in ["always_category", "always"] {
+            let err = approve(&c, &call_id, scope, false, None, false, &mut out)
+                .await
+                .unwrap_err();
+            assert_eq!(code_of(&*err), exit::REJECTED, "{scope}");
+        }
+        approve(&c, &call_id, "once", false, None, false, &mut out)
+            .await
+            .unwrap();
         c.follow_run(&run, |_, _| {}).await.unwrap();
 
         out.clear();
         grants_list(&c, &bot, false, &mut out).await.unwrap();
-        assert_eq!(String::from_utf8_lossy(&out), "category  fs\n");
-        out.clear();
-        grants_list(&c, &bot, true, &mut out).await.unwrap();
-        let g: Value = serde_json::from_slice(&out).unwrap();
-        assert_eq!(g[0]["target"], json!({"kind": "category", "name": "fs"}));
+        assert_eq!(
+            String::from_utf8_lossy(&out),
+            "(no grants)
+"
+        );
 
-        // Revoke: validation, success, repeat, unknown bot.
+        // Revoke: validation, nothing to revoke, unknown bot.
         assert_eq!(
             code_of(&*grant_target_body(None, None).unwrap_err()),
             exit::REJECTED
@@ -915,11 +914,6 @@ mod tests {
             .unwrap_err();
         assert_eq!(code_of(&*err), exit::NOT_FOUND);
         let by_cat = grant_target_body(None, Some("fs")).unwrap();
-        out.clear();
-        grants_revoke(&c, &bot, by_cat.clone(), false, &mut out)
-            .await
-            .unwrap();
-        assert_eq!(String::from_utf8_lossy(&out), "revoked\n");
         let err = grants_revoke(&c, &bot, by_cat.clone(), false, &mut out)
             .await
             .unwrap_err();
@@ -928,9 +922,6 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(code_of(&*err), exit::NOT_FOUND);
-        out.clear();
-        grants_list(&c, &bot, false, &mut out).await.unwrap();
-        assert_eq!(String::from_utf8_lossy(&out), "(no grants)\n");
         let bad = grant_target_body(None, Some("nonsense")).unwrap();
         let err = grants_revoke(&c, &bot, bad, false, &mut out)
             .await

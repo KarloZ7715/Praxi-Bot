@@ -1440,6 +1440,10 @@ export class ApiClient {
   composioLogo(slug: string): Promise<Blob> {
     return this.requestBlob("GET", `/composio/logos/${encodeURIComponent(slug)}`);
   }
+  /** Cached favicon fetched directly by the daemon from the domain over HTTPS. */
+  faviconBlob(domain: string): Promise<Blob> {
+    return this.requestBlob("GET", `/favicons/${encodeURIComponent(domain)}`);
+  }
   composioApp(slug: string): Promise<ComposioApp> {
     return this.request("GET", `/composio/apps/${encodeURIComponent(slug)}`);
   }

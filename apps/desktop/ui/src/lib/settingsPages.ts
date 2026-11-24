@@ -68,6 +68,7 @@ export const CARD_META: Record<string, CardMeta> = {
   email: { page: "apps", risk: "email" },
 
   "safety-levels": { page: "safety", learn: "permissions" },
+  "allowed-grants": { page: "safety", learn: "permissions" },
   permissions: { page: "safety", advanced: true, risk: "permissions", learn: "permissions" },
   "trusted-folders": { page: "safety", risk: "folders", learn: "folders" },
   "safe-mode": { page: "safety", learn: "safeMode" },

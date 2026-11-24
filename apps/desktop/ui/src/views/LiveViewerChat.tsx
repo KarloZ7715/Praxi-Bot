@@ -35,10 +35,10 @@ function PendingApproval({ approval, client }: { approval: NeedsYouEntry; client
       <div className={styles.chatApproval}>
         <span>{approval.title}</span>
         <Button size="sm" variant="primary" disabled={busy} onClick={() => void decide("approve")}>
-          {t("liveView.chat.approve")}
+          {t("chat.approval.compact.allow")}
         </Button>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void decide("deny")}>
-          {t("liveView.chat.reject")}
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => void decide("deny")}>
+          {t("chat.approval.deny")}
         </Button>
       </div>
       {error ? <p className={styles.errorInline} role="alert">{error}</p> : null}

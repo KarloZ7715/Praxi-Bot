@@ -1484,6 +1484,23 @@
         "tools": "Tools"
       },
       "commandShortened": "Command shortened: only the first {{shown}} characters are shown.",
+      "compact": {
+        "allow": "Permitir",
+        "alwaysSite": "Permitir siempre",
+        "alwaysTool": "Permitir siempre",
+        "controlGrant": "Compartir pantalla y control del teclado",
+        "deletePath": "Eliminar {{path}}",
+        "openSite": "Abrir {{site}}",
+        "openSite_idn": "Abrir {{site}} (dirección internacional, revísala con cuidado)",
+        "openSite_mixed": "Abrir {{site}} (mezcla alfabetos, puede imitar otro sitio)",
+        "runCommand": "Ejecutar {{command}}",
+        "schedule": {
+          "create": "Crear programación \"{{name}}\"",
+          "delete": "Eliminar programación \"{{name}}\"",
+          "edit": "Actualizar programación \"{{name}}\""
+        },
+        "sendMail": "Enviar correo a {{to}}"
+      },
       "computer": "This action runs on {{kind}} \"{{name}}\" (id {{id}}).",
       "control": {
         "button": "This task: {{program}}",
@@ -5170,7 +5187,8 @@
     "permissions": {
       "description": "What each bot may do right now, including “Always allow” rules you granted from approval cards.",
       "grantCategory": "Always allow every {{name}} tool",
-      "grantScoped": "Always allow {{tool}} on {{target}}",
+      "grantScoped": "{{tool}} ({{scope}})",
+      "grantSite": "Abrir siempre {{site}}",
       "grantTool": "Always allow {{name}}",
       "inertGrant": "Inactive: this rule is not tied to a computer and no longer applies.",
       "mode": "Mode: {{mode}}",
@@ -5203,6 +5221,10 @@
       "defaultModel": "Default model",
       "description": "API keys are stored in your OS keychain. Changes are picked up by the background service without a restart.",
       "disabled": "Disabled",
+      "keyHelp": {
+        "mistral": "Mistral necesita una clave de API de La Plateforme (console.mistral.ai). Una suscripción de chat de Le Chat no es una clave de API y aquí no funciona.",
+        "open": "Crear una clave de Mistral"
+      },
       "keyHint": "The key is sent to the OS keychain and never shown again.",
       "keyStored": "key stored",
       "localDaemonOnly": "Provider setup is available for the local background service started by this app. For other connections, manage providers on the computer running the background service.",
@@ -5731,6 +5753,11 @@
       "providers": "Only change this if someone gave you exact details. A wrong entry can stop your bots from answering."
     },
     "safety": {
+      "allowedGrants": {
+        "description": "Sitios y herramientas que un bot puede usar sin preguntar cada vez. Revoca cualquier entrada para volver a preguntar.",
+        "empty": "Aún no hay permisos permanentes de sitios o acciones. Elige \"Permitir siempre\" en una tarjeta de aprobación para añadir uno aquí.",
+        "title": "Sitios y acciones permitidos"
+      },
       "custom": "You have custom rules (see Advanced). Pick a level to replace them.",
       "description": "Pick how much freedom your bots have. You can change it any time.",
       "lead": "Choose one level. Every bot follows it unless you gave that bot its own rules.",

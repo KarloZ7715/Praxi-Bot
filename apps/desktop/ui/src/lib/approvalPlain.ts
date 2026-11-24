@@ -1,4 +1,7 @@
 import type { ComputerApprovalDetails, EgressApprovalDetails } from "./approvalDetails.ts";
+import { describeTool, hostOf, isSendTool, resolveToolCall } from "./toolLabels.ts";
+
+type AppName = (server: string) => string | null;
 
 /** `t` as i18next gives it; a plain function keeps this module free of React. */
 export type T = (key: string, values?: Record<string, unknown>) => string;
@@ -241,7 +244,7 @@ function cutAndEscape(text: string, max: number): { text: string; shortened: boo
  * `null` for any other call. Only a very long one is cut (`shortened`, text ends in "…").
  */
 export function actionCommand(tool: string, input: unknown): { text: string; shortened: boolean } | null {
-  if (tool !== "shell_run" && tool !== "pc_shell_run") return null;
+  if (tool !== "shell_run" && tool !== "pc_shell_run" && tool !== "shell.run") return null;
   const rec = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
   const text = typeof rec.command === "string" ? rec.command.trim() : "";
   if (!text) return null;
@@ -303,4 +306,223 @@ export function browserStepLines(details: unknown, t: T): string[] | null {
     lines.push(t(`chat.approval.steps.${key}`, values));
   }
   return lines;
+}
+
+function asObj(v: unknown): Record<string, unknown> | null {
+  return typeof v === "object" && v !== null && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : null;
+}
+
+/** Public hostname targeted by a browser/web/site approval, for rendering a crisp site favicon. */
+export function approvalTargetDomain(tool: string, input: unknown, details?: unknown): string | null {
+  const rec = asObj(input) ?? {};
+  for (const key of ["url", "href", "origin", "domain", "site"]) {
+    const raw = rec[key];
+    if (typeof raw === "string" && raw.trim()) {
+      const host = hostOf(raw.trim());
+      if (host && host.includes(".")) return host;
+      if (!raw.includes("/") && !raw.includes(":") && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(raw.trim())) {
+        return raw.trim().replace(/^www\./i, "").toLowerCase();
+      }
+    }
+  }
+  const det = asObj(details);
+  if (det) {
+    const egress = asObj(det.egress);
+    const candidate =
+      (typeof egress?.host === "string" && egress.host) ||
+      (typeof det.host === "string" && det.host) ||
+      null;
+    if (candidate) {
+      const host = hostOf(candidate) ?? candidate.replace(/^www\./i, "").toLowerCase();
+      if (host.includes(".") && !host.includes(" ")) return host;
+    }
+    const mem = asObj(det.memory);
+    if (mem?.kind === "origin" && typeof mem.pattern === "string") {
+      const host = hostOf(mem.pattern);
+      if (host && host.includes(".")) return host;
+    }
+  }
+  void tool;
+  return null;
+}
+
+export type RiskKind = "send" | "delete" | "run";
+
+/**
+ * Classifies high-consequence actions whose critical target data (recipient/subject,
+ * command line, or path) must stay visible on the compact card before expanding Details.
+ */
+export function approvalRiskKind(tool: string, input: unknown, details?: unknown): RiskKind | null {
+  const call = resolveToolCall(tool, input);
+  const low = call.name.toLowerCase();
+  if (isSendTool(tool) || isSendTool(call.name)) return "send";
+  if (low === "shell_run" || low === "pc_shell_run" || low === "shell.run" || low === "shell") {
+    return "run";
+  }
+  if (
+    low === "fs_delete" ||
+    low === "pc_fs_delete" ||
+    low.includes("delete") ||
+    low.includes("remove") ||
+    low.includes("wipe") ||
+    low.includes("purge")
+  ) {
+    return "delete";
+  }
+  const det = asObj(details);
+  if (det?.kind === "schedule" && det.action === "delete") return "delete";
+  return null;
+}
+
+/** Read-only tools a standing "Always allow" may cover; mirrors the daemon's allow-list. */
+const ALWAYS_READ_ONLY_TOOLS = new Set(["fs_read", "fs_list", "fs_stat", "fs_search"]);
+
+/**
+ * Whether standing "Always allow" is refused for this call. The daemon is authoritative (it
+ * refuses the choice and sends `always_offered`); this mirrors its ALLOW-list so the button never
+ * shows for anything else: only `browser_open` scoped to one origin and the listed read-only
+ * tools qualify. Sends, writes, shell, MCP / Composio tools of any name, desktop input and
+ * every destructive, paid or credential action are refused.
+ */
+export function isAlwaysBlockedAction(tool: string, input: unknown, details?: unknown): boolean {
+  const call = resolveToolCall(tool, input);
+  const det = asObj(details);
+  if (det?.always_offered === false) return true;
+  if (det?.kind === "bot" || det?.kind === "control_grant" || det?.kind === "app_action") return true;
+  if (det?.kind === "schedule") return true;
+  if (call.name === "browser_open") return asObj(det?.memory)?.kind !== "origin";
+  return !ALWAYS_READ_ONLY_TOOLS.has(call.name);
+}
+
+type HostFlag = "mixed" | "idn" | null;
+
+/** Scripts present in a host's letters (Latin / Cyrillic / Greek / other). */
+function scriptsOf(host: string): Set<string> {
+  const out = new Set<string>();
+  for (const ch of host) {
+    if (/[A-Za-z]/.test(ch)) out.add("latin");
+    else if (/\p{Script=Cyrillic}/u.test(ch)) out.add("cyrillic");
+    else if (/\p{Script=Greek}/u.test(ch)) out.add("greek");
+    else if (/\p{L}/u.test(ch)) out.add("other");
+  }
+  return out;
+}
+
+/**
+ * The address as the owner must read it: the ASCII (punycode) form of the host, and whether it
+ * can imitate another site: `mixed` when letters of several alphabets share the name (a Cyrillic
+ * "о" inside `webioo.com.tr`), `idn` for any other international name (non-ASCII or `xn--`).
+ */
+export function lookalikeHost(rawTarget: string, host: string): { host: string; flag: HostFlag } {
+  const authority = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)/i.exec(rawTarget.trim())?.[1] ?? rawTarget.trim();
+  const rawHost = authority.slice(authority.lastIndexOf("@") + 1).replace(/:\d*$/, "");
+  const scripts = scriptsOf(rawHost);
+  let ascii = host;
+  if (/[\u0080-\u{10ffff}]/u.test(host)) {
+    try {
+      ascii = new URL(`https://${host}`).hostname;
+    } catch {
+      ascii = host;
+    }
+  }
+  if (scripts.size > 1) return { host: ascii, flag: "mixed" };
+  if (/[\u0080-\u{10ffff}]/u.test(rawHost) || /(^|\.)xn--/i.test(ascii)) return { host: ascii, flag: "idn" };
+  return { host: ascii, flag: null };
+}
+
+/** One short exact-data line for risky send/delete/run cards; null for non-risky calls or when already shown verbatim in headline. */
+export function approvalCompactPreview(
+  tool: string,
+  input: unknown,
+  details?: unknown
+): { text: string; kind: RiskKind } | null {
+  const kind = approvalRiskKind(tool, input, details);
+  if (!kind) return null;
+  const call = resolveToolCall(tool, input);
+  const rec = asObj(call.input) ?? {};
+  if (kind === "run") {
+    const raw = typeof rec.command === "string" ? rec.command.trim() : "";
+    if (!raw || [...raw].length <= 44 && !raw.includes("\n")) return null;
+    const cmd = whole(raw, 110);
+    return cmd ? { kind, text: escapeInvisible(cmd) } : null;
+  }
+  if (kind === "send") {
+    const to = typeof rec.to === "string" ? rec.to : Array.isArray(rec.to) ? rec.to.join(", ") : "";
+    const subject = typeof rec.subject === "string" ? rec.subject : "";
+    const joined = [to, subject].filter(Boolean).join(" — ");
+    return joined ? { kind, text: escapeInvisible(clip(joined, 110)) } : null;
+  }
+  const target =
+    (typeof rec.path === "string" && rec.path) ||
+    (typeof rec.target === "string" && rec.target) ||
+    (typeof rec.id === "string" && rec.id) ||
+    "";
+  return target ? { kind, text: escapeInvisible(clip(target, 110)) } : null;
+}
+
+/**
+ * One short plain sentence describing the approval request ("Open webioo.com.tr",
+ * "Run shell command", "Send email to team@praxi.dev").
+ */
+export function approvalHeadline(
+  tool: string,
+  input: unknown,
+  details: unknown,
+  w: WhereInput,
+  t: T,
+  brandName?: AppName
+): string {
+  const det = asObj(details);
+  if (det?.kind === "bot" && typeof det.action === "string") {
+    return t(`chat.approval.bot.title.${det.action}`);
+  }
+  if (det?.kind === "control_grant") {
+    return t("chat.approval.compact.controlGrant");
+  }
+  if (det?.kind === "schedule") {
+    const action = typeof det.action === "string" ? det.action : "create";
+    const name = typeof det.name === "string" ? det.name : "";
+    if (name) return t(`chat.approval.compact.schedule.${action}`, { name: clip(name, 48) });
+  }
+  if (det?.kind === "app_action" && typeof det.app === "string" && typeof det.action === "string") {
+    return `${det.app} · ${det.action}`;
+  }
+  const call = resolveToolCall(tool, input);
+  const domain = approvalTargetDomain(call.name, call.input, details);
+  if (
+    domain &&
+    (call.name === "browser_open" ||
+      call.name === "pc_browser_open" ||
+      call.name.endsWith("browser_navigate") ||
+      call.name.endsWith("browser_tab_new"))
+  ) {
+    // The host is shown whole (never clipped) and, for an international name, in its ASCII
+    // form with a warning, so a look-alike cannot read as the site it imitates.
+    const rawTarget = typeof asObj(call.input)?.url === "string" ? (asObj(call.input)!.url as string) : domain;
+    const { host, flag } = lookalikeHost(rawTarget, domain);
+    if (flag) return t(`chat.approval.compact.openSite_${flag}`, { site: host });
+    return t("chat.approval.compact.openSite", { site: host });
+  }
+  const rec = asObj(call.input) ?? {};
+  if ((call.name === "email_send" || call.name.endsWith("send_message")) && typeof rec.to === "string" && rec.to.trim()) {
+    return t("chat.approval.compact.sendMail", { to: escapeInvisible(clip(rec.to.trim(), 48)) });
+  }
+  if (call.name === "shell_run" || call.name === "pc_shell_run" || call.name === "shell.run") {
+    const cmd = typeof rec.command === "string" ? clip(rec.command.trim(), 44) : "";
+    if (cmd) return t("chat.approval.compact.runCommand", { command: escapeInvisible(cmd) });
+  }
+  if (call.name === "fs_delete" || call.name === "pc_fs_delete") {
+    const p = typeof rec.path === "string" ? clip(rec.path.trim(), 48) : "";
+    if (p) return t("chat.approval.compact.deletePath", { path: escapeInvisible(p) });
+  }
+  const plain =
+    browserMcpText(call.name, call.input, details, t) ??
+    actionText(call.name, call.input, w, t);
+  if (plain) return plain;
+  const mcp = /^mcp:([^/]+)\/(.+)$/.exec(call.name);
+  const canonical = mcp ? `${mcp[1]}.${mcp[2]}` : call.name;
+  const stepLabel = describeTool(canonical, call.input, brandName);
+  return t(`${stepLabel.key}.running`, stepLabel.values);
 }

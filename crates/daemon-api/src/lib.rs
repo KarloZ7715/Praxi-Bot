@@ -34,6 +34,7 @@ mod email_routes;
 pub mod error;
 #[cfg(any(test, feature = "fake-provider"))]
 pub mod fake;
+mod favicon;
 mod file_access;
 mod fill_routes;
 pub mod host;
@@ -1601,6 +1602,7 @@ fn api_routes() -> Router<AppState> {
         )
         .route("/v1/composio/toolkits", get(c::composio_catalog))
         .route("/v1/composio/logos/{slug}", get(c::composio_logo))
+        .route("/v1/favicons/{domain}", get(favicon::get_favicon))
         .route("/v1/composio/apps", get(c::composio_list_apps))
         .route(
             "/v1/composio/apps/{slug}",

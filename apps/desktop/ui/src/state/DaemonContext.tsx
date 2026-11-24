@@ -231,6 +231,11 @@ export function useDaemon(): DaemonContextValue {
   return v;
 }
 
+/** Optional client lookup for leaf components that also render in isolated SSR/tests. */
+export function useOptionalDaemonClient(): ApiClient | null {
+  return useContext(Ctx)?.client ?? null;
+}
+
 /** Everything a session reads from one daemon: its lists, events and health. */
 type DaemonData = Pick<
   DaemonContextValue,

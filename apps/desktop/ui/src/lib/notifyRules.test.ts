@@ -127,8 +127,8 @@ test("private mode keeps only bot name and generic text", () => {
   const d = decideNotification(env(approval, 11_000), ctx());
   assert.ok(d);
   const open = notificationText(d, "Atlas", false, t);
-  // an approval is worded from the tool, never from the raw summary
-  assert.ok(open.body.startsWith("notify.approval.other"));
+  // an approval is worded plainly from the tool/headline, prefixed by bot name
+  assert.ok(open.body.startsWith("Atlas: "));
   assert.ok(!open.body.includes("rm -rf"));
   const question = notificationText({ ...d, approval: undefined }, "Atlas", false, t);
   assert.equal(question.body, "notify.detail.needsYou:Run rm -rf build");
@@ -158,11 +158,11 @@ test("approval toast says one human sentence, never the raw summary, json or ids
     approval: appr()
   };
   const text = notificationText(d, "Praxi", false, tr);
-  assert.ok(text.body.startsWith("notify.approval.mcp"));
+  assert.ok(text.body.startsWith("Praxi: "));
   assert.ok(text.body.includes('"app":"Playwright"'));
   assert.ok(text.body.includes('"action":"browser evaluate"'));
   assert.ok(!text.body.includes("function") && !text.body.includes("ca99609c") && !text.body.includes("pc:"));
-  assert.deepEqual(text.actions?.map((a) => a.id), ["allow", "always", "deny"]);
+  assert.deepEqual(text.actions?.map((a) => a.id), ["allow", "deny"], "no Always for an MCP tool");
   assert.equal(text.callId, "call-1");
   // private mode: no names, no buttons
   const priv = notificationText(d, "Praxi", true, tr);
@@ -174,6 +174,8 @@ test("always-allow is offered only when the card would offer it; special cards g
   assert.equal(alwaysOffered(undefined), true);
   assert.equal(alwaysOffered({ once_only: true }), false);
   assert.equal(alwaysOffered({ why: "egress", once_only: false }), false);
+  assert.equal(alwaysOffered({ always_offered: true }, "fs_delete", { path: "a" }), false);
+  assert.equal(alwaysOffered({ always_offered: true }, "mcp:stripe/create_payment", {}), false);
   assert.deepEqual(approvalActions(appr({ once_only: true })), ["allow", "deny"]);
   assert.deepEqual(approvalActions(appr({ kind: "egress", once_only: false })), []);
   assert.deepEqual(approvalActions(appr(undefined, "gmail.send_email")), []);
@@ -183,9 +185,15 @@ test("a pressed button is re-checked against the pending approval and uses the c
   assert.deepEqual(resolveNotificationAction("allow", appr()), {
     kind: "decide", decision: "approve", scope: "once"
   });
-  assert.deepEqual(resolveNotificationAction("always", appr()), {
+  const site = (details: unknown = { always_offered: true, memory: { kind: "origin", pattern: "https://a.example:443" } }) => ({
+    ...appr(details, "browser_open"),
+    input: { url: "https://a.example/x" }
+  });
+  assert.deepEqual(resolveNotificationAction("always", site()), {
     kind: "decide", decision: "approve", scope: "always"
   });
+  // an MCP tool never gets a standing choice, even when a card claims it
+  assert.deepEqual(resolveNotificationAction("always", appr({ always_offered: true })), { kind: "open" });
   assert.deepEqual(resolveNotificationAction("deny", appr()), { kind: "decide", decision: "deny" });
   // not offered now -> never approves, just opens the app
   assert.deepEqual(resolveNotificationAction("always", appr({ once_only: true })), { kind: "open" });

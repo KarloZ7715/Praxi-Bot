@@ -23,6 +23,7 @@ import { chatActivity, chatDateLabel } from "../lib/botLanding";
 import { CHAT_SEARCH_MIN_CHATS, filterChats } from "../lib/chatSearch";
 import type { PresetChoice } from "../lib/botProfile";
 import { modelLine } from "../lib/modelName";
+import { approvalHeadline, type T } from "../lib/approvalPlain";
 import { runNow } from "../lib/runNow";
 import { toolSentence } from "../lib/runSentence";
 import { cancelRun } from "../state/appStop";
@@ -313,7 +314,13 @@ export function BotPanel({
                 <div className={styles.nowText}>
                   <b>
                     {now.approval
-                      ? t("botPanel.now.waiting")
+                      ? approvalHeadline(
+                          now.approval.name,
+                          now.approval.input,
+                          now.approval.details,
+                          { computer: null, serverName: null },
+                          t as unknown as T
+                        )
                       : now.step
                         ? toolSentence(t, now.step)
                         : t("botPanel.now.thinking")}

@@ -1,7 +1,8 @@
 import type { GlobalEnvelope } from "../api/types.ts";
 import type { RunState, ToolItem } from "../state/timeline.ts";
 import { isBatchable } from "./approvalBatch.ts";
-import { describeTool, isSendTool, resolveToolCall } from "./toolLabels.ts";
+import { approvalHeadline, isAlwaysBlockedAction, type T } from "./approvalPlain.ts";
+import { isSendTool, resolveToolCall } from "./toolLabels.ts";
 
 /** A run that took longer than this notifies when it finishes (unfocused). */
 export const LONG_RUN_MS = 30_000;
@@ -38,13 +39,19 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * Does the approval card offer a standing "always" choice?  Mirrors ApprovalCard: not for a
- * once-only call (older events: any details mean once only) and not for a taint-gate card.
+ * Does the approval card offer a standing "always" choice? Mirrors ApprovalCard: not for a
+ * once-only call, destructive/credential/payment actions, or unsafe taint-gate cards.
  */
-export function alwaysOffered(details: unknown): boolean {
+export function alwaysOffered(details: unknown, toolName?: string, input?: unknown): boolean {
   const facts = isObject(details) ? details : undefined;
   const onceOnly =
     typeof facts?.once_only === "boolean" ? facts.once_only : details != null;
+  if (typeof facts?.always_offered === "boolean") {
+    return facts.always_offered && (!toolName || !isAlwaysBlockedAction(toolName, input, details));
+  }
+  if (toolName && isAlwaysBlockedAction(toolName, input, details)) {
+    return false;
+  }
   return !onceOnly && facts?.why !== "egress" && facts?.why !== "executes";
 }
 
@@ -63,7 +70,7 @@ export function approvalActions(a: ApprovalFacts): NotifyActionId[] {
   if (!isBatchable(probe) || isSendTool(a.toolName) || isSendTool(real)) {
     return [];
   }
-  return alwaysOffered(a.details) ? ["allow", "always", "deny"] : ["allow", "deny"];
+  return alwaysOffered(a.details, a.toolName, a.input) ? ["allow", "always", "deny"] : ["allow", "deny"];
 }
 
 /** What a pressed toast button does: decide through the card's own path, or just open the app. */
@@ -200,14 +207,8 @@ export interface NotificationText {
 
 type AppName = (server: string) => string | null;
 
-/** `mcp:playwright/browser_evaluate` and `playwright.browser_evaluate` are the same call. */
-function canonicalTool(name: string): string {
-  const m = /^mcp:([^/]+)\/(.+)$/.exec(name);
-  return m ? `${m[1]}.${m[2]}` : name;
-}
-
 /**
- * One human sentence for an approval ("Praxi wants to use Playwright (browser evaluate)"):
+ * One human sentence for an approval ("Atlas: Open example.com"):
  * never the raw summary, the arguments, a device id or the `pc:` prefix.
  */
 export function approvalSentence(
@@ -216,18 +217,15 @@ export function approvalSentence(
   t: Translate,
   brandName?: AppName
 ): string {
-  const label = describeTool(canonicalTool(a.toolName), a.input, brandName);
-  if (label.key.startsWith("chat.step.mcp")) {
-    return t("notify.approval.mcp", {
-      bot: botName,
-      app: String(label.values.app ?? ""),
-      action: String(label.values.action ?? "")
-    });
-  }
-  return t("notify.approval.other", {
-    bot: botName,
-    what: t(`${label.key}.running`, label.values)
-  });
+  const short = approvalHeadline(
+    a.toolName,
+    a.input,
+    a.details,
+    { computer: null, serverName: null },
+    t as unknown as T,
+    brandName
+  );
+  return `${botName}: ${short}`;
 }
 
 type Translate = (key: string, values?: Record<string, string>) => string;

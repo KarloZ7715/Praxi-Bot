@@ -3,6 +3,7 @@ import {
   AppWindow,
   Bot,
   CalendarClock,
+  ChevronDown,
   Clock,
   ShieldAlert,
   ShieldCheck,
@@ -39,12 +40,27 @@ import {
   type ScheduleApprovalDetails
 } from "../lib/approvalDetails";
 import { brandIcon } from "../lib/brandIcons";
-import { describeTool, isSendTool, resolveToolCall } from "../lib/toolLabels";
+import { describeTool, resolveToolCall } from "../lib/toolLabels";
+import { SiteFavicon } from "./SiteFavicon";
 import { StepIcon } from "./StepIcon";
 import formStyles from "./Form.module.css";
 import styles from "./ChatCards.module.css";
 import { humanLine, humanToolError } from "../lib/humanError";
-import { COMMAND_LIMIT, INPUT_LIMIT, actionArguments, browserMcpText, browserStepLines, actionCommand, actionText, hostText, reasonLine, sourceText, type T } from "../lib/approvalPlain";
+import {
+  COMMAND_LIMIT,
+  INPUT_LIMIT,
+  actionArguments,
+  actionCommand,
+  approvalCompactPreview,
+  approvalHeadline,
+  approvalTargetDomain,
+  browserStepLines,
+  hostText,
+  isAlwaysBlockedAction,
+  reasonLine,
+  sourceText,
+  type T
+} from "../lib/approvalPlain";
 import { ErrorNotice } from "./ErrorNotice";
 
 const brandName = (name: string): string | null => {
@@ -512,30 +528,29 @@ export function ApprovalCard({
   const tt = t as unknown as T;
   // `use_tool` wraps the real call: the card words (and the glyph shows) the call that would run.
   const call = resolveToolCall(tool.name, tool.input);
-  const plainAction =
-    browserMcpText(call.name, call.input, tool.details, tt) ??
-    actionText(call.name, call.input, { computer, serverName }, tt);
+  const callGlyph = describeTool(call.name, call.input, brandName);
+  const domain = approvalTargetDomain(call.name, call.input, tool.details);
   const command = actionCommand(call.name, call.input);
-  // Without a command box the owner still sees the real tool and EVERY argument (path, recipient, body).
   const args = command ? null : actionArguments(call.input);
-  const stepLabel = describeTool(call.name, call.input, brandName);
   const steps = browserStepLines(tool.details, tt);
-  const headline = plainAction ?? t(`${stepLabel.key}.running`, stepLabel.values);
-  const plainReason = egress ? reasonLine(egress, tt) : null;
-  const detailBody = (
-    <>
-      {computer && (egress || schedule) ? (
-        <p className={styles.bodyLabel} data-testid="approval-computer">
-          {t("chat.approval.computer", {
-            kind: computer.kind,
-            name: computer.name,
-            id: computer.nodeId
-          })}
-        </p>
-      ) : null}
-      {egress ? <EgressApprovalBody d={egress} onReviewed={setReviewedPayload} /> : null}
-    </>
+  const headline = approvalHeadline(
+    tool.name,
+    tool.input,
+    tool.details,
+    { computer, serverName },
+    tt,
+    brandName
   );
+  const compactPreview = approvalCompactPreview(tool.name, tool.input, tool.details);
+  const plainReason = egress ? reasonLine(egress, tt) : null;
+  const blockedAlways = isAlwaysBlockedAction(call.name, call.input, tool.details);
+  const showAlways = !onceOnly && alwaysOffered && !blockedAlways;
+  const alwaysLabel =
+    memory?.kind === "origin"
+      ? t("chat.approval.compact.alwaysSite")
+      : t("chat.approval.compact.alwaysTool");
+  const openDetailsByDefault = egress?.reviewFullPayload === true || (app ? app.count <= 1000 : false);
+
   return (
     <div
       className={[styles.approval, outbound ? styles.outbound : ""]
@@ -546,162 +561,197 @@ export function ApprovalCard({
       data-testid={outbound ? "approval-card-outbound" : "approval-card"}
       data-call-id={tool.callId}
     >
-      <span className={styles.approvalIcon}>
-        <StepIcon icon={glyph.icon} brand={glyph.brand} size={22} />
-      </span>
-      <div className={styles.approvalMain}>
-        <div className={styles.approvalHead}>
-          <span className={styles.approvalTitle}>
-            {outbound ? t("chat.approval.sendTitle") : t("chat.approval.title")}
-          </span>
-          {remaining !== null ? (
-            <span className={styles.countdown} role="timer" aria-live="off">
-              {t("chat.approval.countdown", { seconds: remaining })}
-            </span>
-          ) : null}
-        </div>
-        {bot ? (
-          <>
-            <p className={styles.approvalSummary}>{t(`chat.approval.bot.title.${bot.action}`)}</p>
-            <BotApprovalBody d={bot} />
-            <div className={styles.approvalMeta}>
-              <span className={styles.approvalTool}>{tool.name}</span>
-            </div>
-          </>
-        ) : app ? (
-          <div data-testid="approval-app-action">
-            <p className={styles.approvalSummary}>{app.app} · {app.action}</p>
-            <p className={styles.bodyLabel}>{app.class} · {app.version}</p>
-            <details open={app.count <= 1000}>
-              <summary>{t("chat.approval.app.arguments", { count: app.count })}</summary>
-              <pre className={styles.code} tabIndex={0}>{app.argumentsText}</pre>
-            </details>
-            <p className={styles.bodyLabel}>{t("chat.approval.app.footer")}</p>
+      <div className={styles.approvalTopRow}>
+        <span className={styles.approvalIcon}>
+          {domain ? (
+            <SiteFavicon domain={domain} size={22} /* no `allowed`: a pending card never fetches */ />
+          ) : (
+            <StepIcon icon={callGlyph.icon ?? glyph.icon} brand={callGlyph.brand ?? glyph.brand} size={20} />
+          )}
+        </span>
+        <div className={styles.approvalMain}>
+          <div className={styles.approvalHead}>
+            <p className={styles.approvalSummary}>{headline}</p>
+            {remaining !== null ? (
+              <span className={styles.countdown} role="timer" aria-live="off">
+                {t("chat.approval.countdown", { seconds: remaining })}
+              </span>
+            ) : null}
           </div>
-        ) : brain ? (
-          <section className={styles.brainReview}>
-            <strong>{t("knowledge.brainApproval")}</strong>
-            <p className={formStyles.hint}>{t("knowledge.brainApprovalHint")}</p>
-            <code>{brain.path}</code>
-            <label>{t("knowledge.brainHash")}<code>{brain.sha256}</code></label>
-            {brain.sources.length ? <ul aria-label={t("knowledge.brainSources")}>{brain.sources.map((source) => <li key={source.id}>{source.label} · {source.id} · v{source.revision}</li>)}</ul> : null}
-            <pre className={styles.brainContent}>{brain.content}</pre>
-          </section>
-        ) : schedule ? (
-          <>
-            <p className={styles.approvalSummary}>
-              {t(`chat.approval.schedule.title.${schedule.action}`)}
+          {compactPreview ? (
+            <p className={styles.compactPreview} data-testid="approval-compact-preview">
+              {compactPreview.text}
             </p>
-            <ScheduleApprovalBody d={schedule} />
-            <div className={styles.approvalMeta}>
-              <span className={styles.approvalTool}>{tool.name}</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className={styles.approvalSummary}>
-              {headline}
-            </p>
-            {steps ? (
-              <>
-                <p className={styles.bodyLabel}>{t("chat.approval.steps.label")}</p>
-                <ol data-testid="approval-browser-steps">
-                  {steps.map((line, i) => (
-                    <li key={i}>{line}</li>
-                  ))}
-                </ol>
-              </>
-            ) : null}
-            {command ? (
-              <>
-                <pre className={styles.code} tabIndex={0} data-testid="approval-command">{command.text}</pre>
-                {command.shortened ? (
-                  <p className={styles.bodyLabel} data-testid="approval-command-shortened">
-                    {t("chat.approval.commandShortened", { shown: COMMAND_LIMIT })}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-            {args ? (
-              <>
-                <p className={styles.bodyLabel}>{t("chat.approval.input.label", { name: call.name })}</p>
-                <pre className={styles.code} tabIndex={0} data-testid="approval-input">{args.text}</pre>
-                {args.shortened ? (
-                  <p className={styles.bodyLabel} data-testid="approval-input-shortened">
-                    {t("chat.approval.input.shortened", { shown: INPUT_LIMIT })}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-            {plainReason ? (
-              <p className={styles.bodyLabel} data-testid="approval-reason">{plainReason}</p>
-            ) : null}
-          </>
-        )}
-        {why ? (
-          <p className={styles.bodyLabel} data-testid="approval-why">
-            {t(`chat.approval.why.${why}`, { defaultValue: "" })}
-          </p>
-        ) : null}
-        {control ? <ControlGrantBody d={control} /> : null}
-        {egress ? (
-          <details open={egress?.reviewFullPayload === true} data-testid="approval-details">
-            <summary className={styles.bodyLabel}>{t("chat.approval.plain.details")}</summary>
-            {detailBody}
-          </details>
-        ) : (
-          detailBody
-        )}
-        {onTrustFolder ? folders.map((folder) => (
-          <Button key={folder} size="sm" variant="secondary" disabled={disabled || trustedFolders.includes(folder)}
-            onClick={() => {
-              setBusy(true);
-              setError(null);
-              void onTrustFolder(folder).then(() => setTrustedFolders((prev) => [...prev, folder]))
-                .catch((e: unknown) => setError(humanLine(e))).finally(() => setBusy(false));
-            }}>
-            {t(trustedFolders.includes(folder) ? "folderTrust.saved" : "folderTrust.action", { folder })}
-          </Button>
-        )) : null}
-        <div className={styles.actions}>
-          <Button
-            size="sm"
-            variant="primary"
-            disabled={disabled || reviewPending || unrenderable}
-            onClick={() => void decide("approve", "once")}
-          >
-            {isSendTool(tool.name)
-              ? t("chat.approval.sendOnce")
-              : t("chat.approval.once")}
-          </Button>
-          {/* One program, until this task ends: only when the daemon offered it. */}
-          {control?.offered ? (
+          ) : null}
+          <div className={styles.actions}>
             <Button
               size="sm"
-              variant="secondary"
-              disabled={disabled || reviewPending}
-              onClick={() => void decide("approve", "run_control")}
+              variant="primary"
+              disabled={disabled || reviewPending || unrenderable}
+              onClick={() => void decide("approve", "once")}
             >
-              {t("chat.approval.control.button", { program: control.program })}
+              {t("chat.approval.compact.allow")}
             </Button>
-          ) : null}
-          {/* This MCP tool until the task ends: only when the daemon offered it. */}
-          {runGrant ? (
+            {showAlways ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={disabled}
+                data-testid="approval-always"
+                title={memoryTarget ?? undefined}
+                onClick={() => void decide("approve", "always")}
+              >
+                {alwaysLabel}
+              </Button>
+            ) : null}
             <Button
               size="sm"
-              variant="secondary"
-              disabled={disabled || reviewPending}
-              data-testid="approval-run-tool"
-              onClick={() => void decide("approve", "run_tool")}
+              variant="ghost"
+              className={styles.denyButton}
+              disabled={disabled}
+              onClick={() => void decide("deny", undefined, reason || undefined)}
             >
-              {t("chat.approval.runTool")}
+              {t("chat.approval.deny")}
             </Button>
-          ) : null}
-          {/* The daemon refuses a standing grant for a once-only card. */}
-          {onceOnly ? null : (
+          </div>
+        </div>
+      </div>
+
+      <details
+        className={styles.detailsBox}
+        open={openDetailsByDefault || undefined}
+        data-testid="approval-details"
+      >
+        <summary className={styles.detailsToggle}>
+          <ChevronDown size={14} aria-hidden="true" className={styles.detailsChevron} />
+          <span>{t("chat.approval.plain.details")}</span>
+        </summary>
+        <div className={styles.detailsBody}>
+          {bot ? (
             <>
-              {/* "For this task" replaces "this chat" on a card that offers it. */}
-              {runGrant ? null : (
+              <BotApprovalBody d={bot} />
+              <div className={styles.approvalMeta}>
+                <span className={styles.approvalTool}>{tool.name}</span>
+              </div>
+            </>
+          ) : app ? (
+            <div data-testid="approval-app-action">
+              <p className={styles.bodyLabel}>{app.app} · {app.action} ({app.class} · {app.version})</p>
+              <details open={app.count <= 1000}>
+                <summary>{t("chat.approval.app.arguments", { count: app.count })}</summary>
+                <pre className={styles.code} tabIndex={0}>{app.argumentsText}</pre>
+              </details>
+              <p className={styles.bodyLabel}>{t("chat.approval.app.footer")}</p>
+            </div>
+          ) : brain ? (
+            <section className={styles.brainReview}>
+              <strong>{t("knowledge.brainApproval")}</strong>
+              <p className={formStyles.hint}>{t("knowledge.brainApprovalHint")}</p>
+              <code>{brain.path}</code>
+              <label>{t("knowledge.brainHash")}<code>{brain.sha256}</code></label>
+              {brain.sources.length ? <ul aria-label={t("knowledge.brainSources")}>{brain.sources.map((source) => <li key={source.id}>{source.label} · {source.id} · v{source.revision}</li>)}</ul> : null}
+              <pre className={styles.brainContent}>{brain.content}</pre>
+            </section>
+          ) : schedule ? (
+            <>
+              <ScheduleApprovalBody d={schedule} />
+              <div className={styles.approvalMeta}>
+                <span className={styles.approvalTool}>{tool.name}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {steps ? (
+                <>
+                  <p className={styles.bodyLabel}>{t("chat.approval.steps.label")}</p>
+                  <ol data-testid="approval-browser-steps">
+                    {steps.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ol>
+                </>
+              ) : null}
+              {command ? (
+                <>
+                  <pre className={styles.code} tabIndex={0} data-testid="approval-command">{command.text}</pre>
+                  {command.shortened ? (
+                    <p className={styles.bodyLabel} data-testid="approval-command-shortened">
+                      {t("chat.approval.commandShortened", { shown: COMMAND_LIMIT })}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+              {args ? (
+                <>
+                  <p className={styles.bodyLabel}>{t("chat.approval.input.label", { name: call.name })}</p>
+                  <pre className={styles.code} tabIndex={0} data-testid="approval-input">{args.text}</pre>
+                  {args.shortened ? (
+                    <p className={styles.bodyLabel} data-testid="approval-input-shortened">
+                      {t("chat.approval.input.shortened", { shown: INPUT_LIMIT })}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+              {plainReason ? (
+                <p className={styles.bodyLabel} data-testid="approval-reason">{plainReason}</p>
+              ) : null}
+            </>
+          )}
+          {why ? (
+            <p className={styles.bodyLabel} data-testid="approval-why">
+              {t(`chat.approval.why.${why}`, { defaultValue: "" })}
+            </p>
+          ) : null}
+          {computer && (egress || schedule) ? (
+            <p className={styles.bodyLabel} data-testid="approval-computer">
+              {t("chat.approval.computer", {
+                kind: computer.kind,
+                name: computer.name,
+                id: computer.nodeId
+              })}
+            </p>
+          ) : null}
+          {control ? <ControlGrantBody d={control} /> : null}
+          {egress ? <EgressApprovalBody d={egress} onReviewed={setReviewedPayload} /> : null}
+          {onTrustFolder && folders.length > 0 ? (
+            <div className={styles.secondaryActions}>
+              {folders.map((folder) => (
+                <Button key={folder} size="sm" variant="secondary" disabled={disabled || trustedFolders.includes(folder)}
+                  onClick={() => {
+                    setBusy(true);
+                    setError(null);
+                    void onTrustFolder(folder).then(() => setTrustedFolders((prev) => [...prev, folder]))
+                      .catch((e: unknown) => setError(humanLine(e))).finally(() => setBusy(false));
+                  }}>
+                  {t(trustedFolders.includes(folder) ? "folderTrust.saved" : "folderTrust.action", { folder })}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {(control?.offered || runGrant || (!onceOnly && !runGrant)) ? (
+            <div className={styles.secondaryActions}>
+              {control?.offered ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={disabled || reviewPending}
+                  onClick={() => void decide("approve", "run_control")}
+                >
+                  {t("chat.approval.control.button", { program: control.program })}
+                </Button>
+              ) : null}
+              {runGrant ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={disabled || reviewPending}
+                  data-testid="approval-run-tool"
+                  onClick={() => void decide("approve", "run_tool")}
+                >
+                  {t("chat.approval.runTool")}
+                </Button>
+              ) : null}
+              {!onceOnly && !runGrant ? (
                 <Button
                   size="sm"
                   variant="secondary"
@@ -712,44 +762,20 @@ export function ApprovalCard({
                     ? t("chat.approval.memory.thisChat", { target: memoryTarget })
                     : t("chat.approval.thisChat")}
                 </Button>
-              )}
-              {/* A taint-gate card keeps its choice to this chat (tool class and site). */}
-              {alwaysOffered ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={disabled}
-                  data-testid="approval-always"
-                  onClick={() => void decide("approve", "always")}
-                >
-                  {memoryTarget
-                    ? t("chat.approval.memory.always", { target: memoryTarget })
-                    : runGrant
-                      ? t("chat.approval.alwaysTool")
-                      : t("chat.approval.always")}
-                </Button>
               ) : null}
-            </>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className={styles.denyButton}
-            disabled={disabled}
-            onClick={() => void decide("deny", undefined, reason || undefined)}
-          >
-            {t("chat.approval.deny")}
-          </Button>
+            </div>
+          ) : null}
+          <input
+            className={[formStyles.input, styles.reasonInput].join(" ")}
+            value={reason}
+            placeholder={t("chat.approval.reasonPlaceholder")}
+            aria-label={t("chat.approval.reasonPlaceholder")}
+            onChange={(e) => setReason(e.target.value)}
+          />
         </div>
-        <input
-          className={[formStyles.input, styles.reasonInput].join(" ")}
-          value={reason}
-          placeholder={t("chat.approval.reasonPlaceholder")}
-          aria-label={t("chat.approval.reasonPlaceholder")}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        {error ? <p className={formStyles.error} role="alert">{error}</p> : null}
-      </div>
+      </details>
+
+      {error ? <p className={formStyles.error} role="alert">{error}</p> : null}
     </div>
   );
 }

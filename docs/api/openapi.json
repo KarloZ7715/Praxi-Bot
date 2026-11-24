@@ -6970,6 +6970,56 @@
         ]
       }
     },
+    "/v1/favicons/{domain}": {
+      "get": {
+        "tags": [
+          "favicons"
+        ],
+        "summary": "A site's favicon, from the local cache or fetched directly from `https://<domain>` (never a\nthird-party favicon service) when that host is already allowed for a bot. Owner-only.\nReturns `404` when unavailable or not allowed so the UI falls back to a globe or letter tile.",
+        "operationId": "get_favicon",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "description": "Public site domain",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favicon image bytes"
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/v1/fill-grants": {
       "get": {
         "tags": [

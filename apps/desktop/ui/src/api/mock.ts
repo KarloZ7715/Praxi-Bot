@@ -18,6 +18,8 @@ import type {
   DetectedProviderDto,
   DoctorCheck,
   LocalModelsDto,
+  Grant,
+  GrantTarget,
   EmailAccount,
   EmailAccountInput,
   InputBatch,
@@ -829,6 +831,29 @@ export class MockApiClient extends ApiClient {
   readonly providersDto: ProvidersDto = structuredClone(PROVIDERS);
   readonly detectedProvidersList: DetectedProviderDto[] = structuredClone(DETECTED_PROVIDERS);
   readonly bots = structuredClone(BOTS);
+  private readonly botGrants = new Map<string, Grant[]>([
+    [
+      "11111111-1111-4111-8111-111111111111",
+      [
+        {
+          granted_at_ms: NOW - 86_400_000,
+          target: {
+            kind: "scoped",
+            tool: "browser_open",
+            scope: "origin",
+            pattern: "https://webioo.com.tr"
+          }
+        },
+        {
+          granted_at_ms: NOW - 3_600_000,
+          target: {
+            kind: "tool",
+            name: "web_search"
+          }
+        }
+      ]
+    ]
+  ]);
   readonly chats: Chat[] = structuredClone([...CHATS, ...BOTS.slice(1).map((b,i) => ({ id: `mock-chat-${i}`, chat_id: `mock-chat-${i}`, bot_id: b.id, title: previews[i+1], created_at_ms: NOW }))]);
   readonly messages = new Map<string, Message[]>();
   readonly secrets = new Map<string, number>();
@@ -978,8 +1003,14 @@ export class MockApiClient extends ApiClient {
       { type: format === "json" ? "application/json" : "text/markdown" });
   }
 
-  /** Review-state stand-in for the daemon's logo cache: a small neutral mark. */
+  /** Review-state stand-in for the daemon's logo and favicon caches. */
   protected override async requestBlob(_method: string, path: string): Promise<Blob> {
+    if (path.startsWith("/favicons/")) {
+      const domain = decodeURIComponent(path.slice("/favicons/".length));
+      const letter = (domain.replace(/^www\./, "")[0] ?? "W").toUpperCase();
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2563EB"/><text x="12" y="16.5" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">${letter}</text></svg>`;
+      return new Blob([svg], { type: "image/svg+xml" });
+    }
     if (!path.startsWith("/composio/logos/")) {
       throw new ApiError(404, "not_found", `mock: no blob route ${path}`);
     }
@@ -1388,7 +1419,33 @@ export class MockApiClient extends ApiClient {
         if (seg[1] && seg[2] === "skills") {
           return ok(this.getBotSkillsState(seg[1]));
         }
+        if (seg[1] && seg[2] === "grants") {
+          return ok(structuredClone(this.botGrants.get(seg[1]) ?? []));
+        }
+        if (seg[1] && !seg[2]) {
+          const found = this.bots.find((b) => b.id === seg[1]);
+          if (!found) throw new ApiError(404, "not_found", `bot ${seg[1]} not found`);
+          const botCopy = structuredClone(found) as Bot & { effective_policy?: unknown };
+          botCopy.effective_policy = {
+            mode: "balanced",
+            categories: {},
+            grants: structuredClone(this.botGrants.get(seg[1]) ?? [])
+          };
+          return ok(botCopy);
+        }
         return ok(mockHostScenario() === "empty" ? [] : structuredClone(this.bots));
+      case "DELETE /bots":
+        if (seg[1] && seg[2] === "grants") {
+          const body = (opts.body ?? {}) as { target?: GrantTarget };
+          const list = this.botGrants.get(seg[1]) ?? [];
+          const key = JSON.stringify(body.target);
+          this.botGrants.set(
+            seg[1],
+            list.filter((g) => JSON.stringify(g.target) !== key)
+          );
+          return ok(undefined);
+        }
+        throw new ApiError(404, "not_found", `mock: ${method} ${path}`);
       case "GET /chats":
         if (seg[2] === "messages") {
           if (this.messages.has(seg[1])) return ok(this.messages.get(seg[1]));
@@ -1570,10 +1627,37 @@ export class MockApiClient extends ApiClient {
       }
       case "GET /approvals":
         return ok(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen") === "approval"
-          ? [{ call_id: "mock-rm", run_id: "mock-live", requested_at_ms: Date.now() - 3000, decision: null, tool_name: "shell.run", summary: "drafts/old klasörünü ve içindeki 14 dosyayı sil" }]
+          ? [{
+              call_id: "mock-rm",
+              run_id: "mock-live",
+              requested_at_ms: Date.now() - 3000,
+              decision: null,
+              tool_name: "shell.run",
+              input: { command: "rm -rf ./drafts/old" },
+              details: { why: "policy", once_only: true },
+              summary: "drafts/old klasörünü ve içindeki 14 dosyayı sil"
+            }]
+          : typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen") === "approval-site"
+          ? [{
+              call_id: "mock-site",
+              run_id: "mock-live",
+              requested_at_ms: Date.now() - 3000,
+              decision: null,
+              tool_name: "browser_open",
+              input: { url: "https://webioo.com.tr/dashboard" },
+              details: {
+                why: "policy",
+                once_only: false,
+                always_offered: true,
+                memory: { kind: "origin", pattern: "https://webioo.com.tr" }
+              },
+              summary: "webioo.com.tr sitesini aç"
+            }]
           : typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen")?.startsWith("approval-schedule")
           ? [{ call_id: "mock-sch", run_id: "mock-live", requested_at_ms: Date.now() - 3000, decision: null, tool_name: "schedule_create", summary: "Create a schedule" }]
           : []);
+      case "POST /approvals":
+        return ok({ call_id: seg[1] ?? "", decision: (opts.body as { decision?: string } | undefined)?.decision ?? "approve" });
       case "GET /runs":
         if (seg[2] === "usage") {
           return ok({ model: "gemini/gemini-3.5-flash-lite", prompt_tokens: 4210, completion_tokens: 388, model_calls: 3 });
@@ -2594,7 +2678,7 @@ export class MockApiClient extends ApiClient {
 function mockLiveRunId(): string | null {
   if (typeof window === "undefined") return null;
   const screen = new URLSearchParams(window.location.search).get("screen");
-  return screen === "working" || screen === "approval" || screen === "subagents" ? "mock-live" : null;
+  return screen === "working" || screen === "approval" || screen === "approval-site" || screen === "subagents" ? "mock-live" : null;
 }
 
 /** Review-state events for `?mock=1&screen=...` (approval, streaming, default run). */
@@ -2602,12 +2686,12 @@ export function mockReviewEvents(): { ts_ms: number; event: GlobalEnvelope["even
   const out: { ts_ms: number; event: GlobalEnvelope["event"] }[] = [];
   const screen = new URLSearchParams(window.location.search).get("screen");
   if (screen === "long-chat") return longChatEvents();
-  if (screen === "approval" || screen?.startsWith("approval-schedule") || screen === "streaming" || screen === "working" || screen === "subagents") {
+  if (screen === "approval" || screen === "approval-site" || screen?.startsWith("approval-schedule") || screen === "streaming" || screen === "working" || screen === "subagents") {
     const bot_id = "11111111-1111-4111-8111-111111111111";
     const chat_id = "33333333-3333-4333-8333-333333333333";
     const events: GlobalEnvelope["event"][] = [
       { type: "run_started", run_id: "mock-live", bot_id, chat_id },
-      { type: "message_delta", run_id: "mock-live", text: screen === "approval" ? "Raporu hazırladım. Paylaşmadan önce eski taslakları temizlemem gerekiyor." : "Taslağı oluşturuyorum, önce kaynakları karşılaştırıyorum…" },
+      { type: "message_delta", run_id: "mock-live", text: screen === "approval" ? "Raporu hazırladım. Paylaşmadan önce eski taslakları temizlemem gerekiyor." : screen === "approval-site" ? "Panelden güncel sipariş durumunu kontrol edeceğim." : "Taslağı oluşturuyorum, önce kaynakları karşılaştırıyorum…" },
       ...(screen === "working" ? [
         { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-w1", tool_name: "web_search", input: { query: "cpu llm benchmark 2026" } },
         { type: "tool_call_completed", run_id: "mock-live", call_id: "mock-w1", error: null },
@@ -2637,6 +2721,23 @@ export function mockReviewEvents(): { ts_ms: number; event: GlobalEnvelope["even
       ...(screen === "approval" ? [
         { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-rm", tool_name: "shell.run", input: { command: "rm -rf ./drafts/old" } },
         { type: "approval_needed", run_id: "mock-live", call_id: "mock-rm", tool_name: "shell.run", input: { command: "rm -rf ./drafts/old" }, summary: "drafts/old klasörünü ve içindeki 14 dosyayı sil" }
+      ] as GlobalEnvelope["event"][] : []),
+      ...(screen === "approval-site" ? [
+        { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-site", tool_name: "browser_open", input: { url: "https://webioo.com.tr/dashboard" } },
+        {
+          type: "approval_needed",
+          run_id: "mock-live",
+          call_id: "mock-site",
+          tool_name: "browser_open",
+          input: { url: "https://webioo.com.tr/dashboard" },
+          summary: "webioo.com.tr sitesini aç",
+          details: {
+            why: "policy",
+            once_only: false,
+            always_offered: true,
+            memory: { kind: "origin", pattern: "https://webioo.com.tr" }
+          }
+        }
       ] as GlobalEnvelope["event"][] : [])
     ];
     events.forEach((event, i) => out.push({ ts_ms: Date.now() - 4000 + i * 300, event }));

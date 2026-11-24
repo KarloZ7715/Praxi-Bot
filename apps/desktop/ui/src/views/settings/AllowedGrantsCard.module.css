@@ -1,0 +1,75 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.botGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.botHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.botName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.list {
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: var(--size-border) solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.itemMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: var(--space-0);
+}
+
+.kindIcon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  min-width: var(--space-0);
+}
+
+.itemTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

@@ -124,6 +124,10 @@ pub const OWNER_ROUTES: &[(&str, &str)] = &[
     // data folder sizes and Clear cache: the owner's own housekeeping, not a token holder's
     ("GET", "/v1/data-usage"),
     ("POST", "/v1/data-usage/clear-cache"),
+    // a favicon lookup is itself egress (DNS + HTTPS carrying the host name): a token holder
+    // (CLI engine, MCP client, script) must not use it to leak data in host names
+    ("GET", "/v1/favicons/{}"),
+    ("HEAD", "/v1/favicons/{}"),
     // bulk usage CSV export: bot names, models and spend history belong to the owner
     ("GET", "/v1/usage/export"),
     ("POST", "/v1/trusted-folders"),

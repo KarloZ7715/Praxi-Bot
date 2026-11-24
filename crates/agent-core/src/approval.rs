@@ -609,6 +609,11 @@ impl Shared {
         if name != "browser_open" || input.as_object().is_none_or(|o| o.len() != 1) {
             return false;
         }
+        // A remembered site only waives untrusted-web-only egress; once the run has read
+        // private data, navigating to any site still asks so private text cannot leak in URLs.
+        if ctx.taint.lock().exposure.has_private() {
+            return false;
+        }
         let Derived::Scope(call) = scoped_grant::derive(name, input) else {
             return false;
         };
@@ -618,6 +623,52 @@ impl Shared {
             &call,
             ctx.tool_grant_scope(name, category).as_deref(),
         )
+    }
+
+    /// Remember the host of an origin the owner just approved a navigation to (any scope), so a
+    /// favicon may be fetched for it. Bounded; the oldest entry goes first.
+    pub(crate) fn note_approved_origin(&self, name: &str, input: &Value) {
+        let Derived::Scope(sc) = scoped_grant::derive(name, input) else {
+            return;
+        };
+        if name != "browser_open" || sc.kind != ScopeKind::Origin {
+            return;
+        }
+        let Some(host) = host_of_origin(&sc.pattern) else {
+            return;
+        };
+        let mut hosts = self.approved_hosts.lock();
+        if !hosts.contains(&host) {
+            if hosts.len() >= 500 {
+                hosts.pop_front();
+            }
+            hosts.push_back(host);
+        }
+    }
+
+    /// Whether `host` already counts as allowed for some bot: a standing or chat grant for its
+    /// origin, or a navigation the owner approved. Fetching its favicon is then no new egress.
+    pub(crate) fn site_allowed(&self, host: &str) -> bool {
+        let host = host.trim_end_matches('.').to_ascii_lowercase();
+        let origin_match = |tool: &str, sc: &Scope| {
+            tool == "browser_open"
+                && sc.kind == ScopeKind::Origin
+                && host_of_origin(&sc.pattern).is_some_and(|h| h == host)
+        };
+        if self.approved_hosts.lock().contains(&host) {
+            return true;
+        }
+        let g = self.grants.lock();
+        g.always.iter().any(|x| {
+            !x.inert
+                && matches!(&x.target, GrantTarget::Scoped { tool, scope } if origin_match(tool, scope))
+        }) || g
+            .this_chat_scoped
+            .iter()
+            .any(|(_, _, tool, sc, _)| origin_match(tool, sc))
+            || g.gate_chat
+                .iter()
+                .any(|(_, _, class, dest)| *class == "web" && host_of_origin(dest).is_some_and(|h| h == host))
     }
 
     /// The Balanced lane for this call, `None` in every other mode.
@@ -1756,13 +1807,28 @@ impl Shared {
             );
         // A standing tool grant for an MCP tool is not offered once the run read something
         // private: the owner decides that on a clean card, never next to private data.
-        let always_refused = Self::run_tool_eligible(name) && exposure.has_private();
-        let always_offered = !once_only
-            && !always_refused
-            && !matches!(
-                why,
-                "egress" | "executes" | "always_ask" | "browser_address"
+        // Destructive, credential and payment actions never offer or accept "Always allow".
+        let site_egress_offered = why == "egress"
+            && name == "browser_open"
+            && !exposure.has_private()
+            && memory.as_ref().is_some_and(|m| m.kind == ScopeKind::Origin);
+        #[cfg(test)]
+        let legacy_always = self
+            .legacy_always
+            .load(std::sync::atomic::Ordering::Relaxed);
+        #[cfg(not(test))]
+        let legacy_always = false;
+        let always_refused = (Self::run_tool_eligible(name) && exposure.has_private())
+            || matches!(why, "floor" | "always_ask" | "executes" | "browser_address")
+            || (why == "egress" && !site_egress_offered)
+            || !always_allowed(
+                name,
+                effect,
+                category,
+                memory.as_ref().is_some_and(|m| m.kind == ScopeKind::Origin),
+                legacy_always,
             );
+        let always_offered = !once_only && !always_refused;
         let class = self.content_class(ctx, name, input);
         if let Some(obj) = details.get_or_insert_with(|| json!({})).as_object_mut() {
             obj.insert("why".into(), json!(why));
@@ -2239,6 +2305,8 @@ impl ExecPermit {
             .sh
             .storage
             .decide_approval(self.approval_id, "approved");
+        // A navigation the owner approved makes its host fetchable for favicons.
+        self.sh.note_approved_origin(&self.name, &self.input);
         // An approved read of the user's computer covers that family for the
         // rest of THIS run only.
         if self.effect == Effect::Read
@@ -2749,6 +2817,42 @@ impl LoopGate {
 /// A script or workflow call that was allowed has put its result in front of
 /// the model by the time the next call is authorized. Record that now so the
 /// next inner call sees the taint. A denial records nothing.
+/// Read-only tools a standing "Always allow" may cover tool-wide. Everything else is refused:
+/// the list is an allow-list on purpose, because a deny-list keyed on tool names misses sends,
+/// writes, shell commands and any MCP / Composio tool with an innocent name.
+const ALWAYS_READ_ONLY_TOOLS: &[&str] = &["fs_read", "fs_list", "fs_stat", "fs_search"];
+
+/// Whether "Always allow" may be offered and accepted for this call at all. Allowed: a
+/// `browser_open` scoped to one exact origin, and an explicitly listed read-only tool whose
+/// effect really is a read. Not allowed: email / send / message / post / upload, file writes,
+/// shell, MCP and Composio tools of any name, desktop input, and anything destructive, paid
+/// or credential-related.
+pub(crate) fn always_allowed(
+    name: &str,
+    effect: Effect,
+    category: PermissionCategory,
+    origin_scoped: bool,
+    legacy_test_lift: bool,
+) -> bool {
+    if legacy_test_lift {
+        return !(matches!(category, PermissionCategory::Money) || effect == Effect::Destructive);
+    }
+    if matches!(category, PermissionCategory::Money) || effect == Effect::Destructive {
+        return false;
+    }
+    if name == "browser_open" {
+        return origin_scoped;
+    }
+    effect == Effect::Read && ALWAYS_READ_ONLY_TOOLS.contains(&name)
+}
+
+fn host_of_origin(origin: &str) -> Option<String> {
+    url::Url::parse(origin)
+        .ok()?
+        .host_str()
+        .map(|h| h.trim_end_matches('.').to_ascii_lowercase())
+}
+
 fn note_gate(ctx: &RunCtx, req: &GateRequest) {
     let mut content = req.content;
     if content.in_owner_browser && crate::browser_url::opens_non_public(&req.tool, &req.input) {

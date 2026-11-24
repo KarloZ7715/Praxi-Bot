@@ -1,0 +1,25 @@
+.frame,
+.fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: var(--size-border) solid var(--color-border);
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent-text);
+  overflow: hidden;
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.letter {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}

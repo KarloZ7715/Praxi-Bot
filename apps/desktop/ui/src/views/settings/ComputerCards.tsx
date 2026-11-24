@@ -17,6 +17,7 @@ import { PermissionsSection } from "../SettingsSections";
 import { ComputerAccessCard } from "../../components/ComputerAccess";
 import { WebSearchCard } from "./WebSearchCard";
 import { AuditLogCard } from "./AuditLogCard";
+import { AllowedGrantsCard } from "./AllowedGrantsCard";
 import { SafetyLevelsCard } from "./SafetyLevelsCard";
 import type { CardDef, SettingsBridge } from "./types";
 
@@ -176,6 +177,15 @@ export function computerCards(b: SettingsBridge, t: TFunction): CardDef[] {
       description: t("folderTrust.description"),
       keywords: "trust folder repository klasor guven depo",
       node: <SettingsCard title={t("folderTrust.title")}><TrustedFolders /></SettingsCard>
+    },
+    {
+      id: "allowed-grants",
+      section: "computer",
+      kind: "block",
+      title: t("settingsModal.safety.allowedGrants.title"),
+      description: t("settingsModal.safety.allowedGrants.description"),
+      keywords: "always allow site domain action revoke izin verilen siteler islemler kaldir her zaman izinli eylem site alan",
+      node: <SettingsCard title={t("settingsModal.safety.allowedGrants.title")} description={t("settingsModal.safety.allowedGrants.description")}><AllowedGrantsCard /></SettingsCard>
     },
     {
       id: "permissions",

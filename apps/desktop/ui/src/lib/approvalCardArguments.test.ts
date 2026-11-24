@@ -96,9 +96,8 @@ test("a browser card says what happens once and offers once, this task and deny"
       browser_action: true
     }
   );
-  assert.ok(html.includes("Praxi wants to open https://example.com/start in your browser."), html);
-  assert.ok(html.includes("Allow for this task"), "task scope offered");
-  assert.ok(!html.includes("Always allow for this bot"), "no standing grant next to private data");
+  assert.ok(html.includes("Allow for this task"), "task scope offered inside details");
+  assert.ok(!html.includes('data-testid="approval-always"'), "no standing grant next to private data");
   // The tool name is not repeated in front of the sentence that already names it.
   const label = /Exactly what (\S+) will receive/.exec(html);
   assert.ok(label, "input label");
@@ -109,8 +108,21 @@ test("a browser card says what happens once and offers once, this task and deny"
     { name: "mcp:crm/update", input: { id: 1 } },
     { why: "policy", once_only: false, run_grant: true, always_offered: true }
   );
-  assert.ok(clean.includes("Allow for this task") && clean.includes("Always allow for this bot (this tool)"));
+  assert.ok(clean.includes("Allow for this task"));
+  // An MCP tool never shows a standing Always allow, whatever its name: only a site does.
+  assert.ok(!clean.includes('data-testid="approval-always"'), "no Always for an MCP tool");
   assert.ok(!clean.includes(">This chat<"), "this task replaces this chat");
+  // Destructive actions never offer Always allow.
+  const del = render("fs_delete", { path: "/Users/emre/tmp/old.txt" }, { why: "policy", once_only: false, always_offered: true });
+  assert.ok(!del.includes('data-testid="approval-always"'), "destructive fs_delete hides Always allow");
+  // A site approval offers Allow, Always allow, and Deny on one compact card.
+  const site = render(
+    "browser_open",
+    { url: "https://webioo.com.tr/dashboard" },
+    { why: "policy", once_only: false, always_offered: true, memory: { kind: "origin", pattern: "https://webioo.com.tr" } }
+  );
+  assert.ok(site.includes('data-testid="approval-always"'), "site approval offers Always allow");
+  assert.ok(site.includes('data-testid="approval-details"'), "site approval provides Details toggle");
   // A tool name alone never makes a call a browser action.
   const unmarked = render("use_tool", { name: "mcp:other/browser_navigate", input: { url: "https://example.com" } }, {
     why: "policy",

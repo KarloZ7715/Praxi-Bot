@@ -87,6 +87,28 @@ impl Tool for Danger {
     }
 }
 
+/// A site navigation that asks (the one tool whose "Always allow" the daemon accepts).
+struct Site;
+
+#[async_trait]
+impl Tool for Site {
+    fn spec(&self) -> &ToolSpec {
+        static SPEC: std::sync::OnceLock<ToolSpec> = std::sync::OnceLock::new();
+        SPEC.get_or_init(|| ToolSpec {
+            name: "browser_open".to_owned(),
+            description: "open a site".to_owned(),
+            input_schema: json!({"type": "object"}),
+            effect: Effect::Write,
+            category: PermissionCategory::Browser,
+            platforms: vec![Platform::All],
+            content: tool_registry::ContentClass::none(),
+        })
+    }
+    async fn call(&self, _: &ToolContext, _: Value) -> Result<ToolOutput, ToolError> {
+        Ok(ToolOutput::text("opened"))
+    }
+}
+
 struct T {
     app: Router,
     state: AppState,
@@ -111,6 +133,7 @@ fn setup_with_config(prepare: impl FnOnce(&std::path::Path), mut config: LoopCon
     let storage = Arc::new(Storage::open(dir.path()).unwrap());
     let tools = ToolRegistry::new();
     tools.register(Arc::new(Danger));
+    tools.register(Arc::new(Site));
     tools.register(Arc::new(Ask));
     let agent = AgentLoop::new(
         Arc::clone(&storage),
@@ -1399,21 +1422,30 @@ async fn grants_are_listed_revoked_and_shown_in_the_effective_policy() {
     let list = call(&t, Method::GET, "/v1/bots", None).await.json();
     assert!(list[0].get("effective_policy").is_none());
 
-    // Approve with the new `always_category` scope.
+    // "Always allow" for a tool-wide or category grant is refused for an ordinary write tool:
+    // the daemon accepts it only for a site (and listed read-only tools). The call can still
+    // be approved once.
     let run = send_msg(&t, &chat, "call:danger_run {}", "queue").await["run_id"]
         .as_str()
         .unwrap()
         .to_owned();
     let (call_id, _) = pending_call(&t).await;
-    let r = call(
-        &t,
-        Method::POST,
-        &format!("/v1/approvals/{call_id}"),
-        Some(json!({"decision": "approve", "scope": "always_category"})),
-    )
-    .await;
-    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
-    wait_state(&t, &run, "succeeded").await;
+    for scope in ["always_category", "always"] {
+        let r = call(
+            &t,
+            Method::POST,
+            &format!("/v1/approvals/{call_id}"),
+            Some(json!({"decision": "approve", "scope": scope})),
+        )
+        .await;
+        assert_eq!(
+            r.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{scope}: {:?}",
+            r.json()
+        );
+        assert_eq!(r.json()["error"]["code"], "approval_once_only");
+    }
     let r = call(
         &t,
         Method::POST,
@@ -1422,22 +1454,62 @@ async fn grants_are_listed_revoked_and_shown_in_the_effective_policy() {
     )
     .await;
     assert_eq!(r.status, StatusCode::BAD_REQUEST);
+    let r = call(
+        &t,
+        Method::POST,
+        &format!("/v1/approvals/{call_id}"),
+        Some(json!({"decision": "approve", "scope": "once"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    wait_state(&t, &run, "succeeded").await;
+    assert_eq!(
+        call(&t, Method::GET, &format!("{bot_path}/grants"), None)
+            .await
+            .json(),
+        json!([])
+    );
 
+    // A site grant: listed, shown in the effective policy, covering that origin only.
+    let run = send_msg(
+        &t,
+        &chat,
+        r#"call:browser_open {"url": "https://webioo.com.tr/a"}"#,
+        "queue",
+    )
+    .await["run_id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let (call_id, _) = pending_call(&t).await;
+    let r = call(
+        &t,
+        Method::POST,
+        &format!("/v1/approvals/{call_id}"),
+        Some(json!({"decision": "approve", "scope": "always"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{:?}", r.json());
+    wait_state(&t, &run, "succeeded").await;
     let grants = call(&t, Method::GET, &format!("{bot_path}/grants"), None).await;
     assert_eq!(grants.status, StatusCode::OK);
     let g = grants.json();
     assert_eq!(g.as_array().unwrap().len(), 1);
-    assert_eq!(g[0]["target"], json!({"kind": "category", "name": "fs"}));
+    assert_eq!(
+        g[0]["target"],
+        json!({"kind": "scoped", "tool": "browser_open", "scope": "origin", "pattern": "https://webioo.com.tr:443"})
+    );
     assert!(g[0]["granted_at_ms"].as_i64().unwrap() > 0);
-
-    // The effective policy now tells the truth.
     let eff = call(&t, Method::GET, &bot_path, None).await.json()["effective_policy"].clone();
-    assert_eq!(eff["categories"]["fs"]["decision"], "allow");
-    assert_eq!(eff["categories"]["fs"]["via_grant"], true);
-    assert_eq!(eff["categories"]["shell"]["decision"], "ask");
     assert_eq!(eff["grants"], g);
-    // ... and a second tool call of that category needs no approval.
-    let run2 = send_msg(&t, &chat, "call:danger_run {}", "queue").await["run_id"]
+    // ... and a second call to that origin needs no approval.
+    let run2 = send_msg(
+        &t,
+        &chat,
+        r#"call:browser_open {"url": "https://webioo.com.tr/b"}"#,
+        "queue",
+    )
+    .await["run_id"]
         .as_str()
         .unwrap()
         .to_owned();
@@ -1463,40 +1535,19 @@ async fn grants_are_listed_revoked_and_shown_in_the_effective_policy() {
     )
     .await;
     assert_eq!(r.status, StatusCode::NOT_FOUND, "no such tool grant");
-    let rev = json!({"target": {"kind": "category", "name": "fs"}});
-    let r = call(&t, Method::DELETE, &path, Some(rev.clone())).await;
-    assert_eq!(r.status, StatusCode::NO_CONTENT);
-    let r = call(&t, Method::DELETE, &path, Some(rev)).await;
-    assert_eq!(r.status, StatusCode::NOT_FOUND);
-    assert_eq!(call(&t, Method::GET, &path, None).await.json(), json!([]));
-    let eff = call(&t, Method::GET, &bot_path, None).await.json()["effective_policy"].clone();
-    assert_eq!(eff["categories"]["fs"]["decision"], "ask");
-
-    // A tool-level grant via `always`, and unknown bots.
-    let run3 = send_msg(&t, &chat, "call:danger_run {}", "queue").await["run_id"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    let (call3, _) = pending_call(&t).await;
-    call(
+    let rev = g[0]["target"].clone();
+    let r = call(
         &t,
-        Method::POST,
-        &format!("/v1/approvals/{call3}"),
-        Some(json!({"decision": "approve", "scope": "always"})),
+        Method::DELETE,
+        &path,
+        Some(json!({"target": rev.clone()})),
     )
     .await;
-    wait_state(&t, &run3, "succeeded").await;
-    let g = call(&t, Method::GET, &path, None).await.json();
-    assert_eq!(
-        g[0]["target"],
-        json!({"kind": "tool", "name": "danger_run"})
-    );
-    let eff = call(&t, Method::GET, &bot_path, None).await.json()["effective_policy"].clone();
-    assert_eq!(
-        eff["categories"]["fs"]["decision"], "ask",
-        "a tool grant does not open the category"
-    );
-    assert_eq!(eff["grants"], g);
+    assert_eq!(r.status, StatusCode::NO_CONTENT);
+    let r = call(&t, Method::DELETE, &path, Some(json!({"target": rev}))).await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+    assert_eq!(call(&t, Method::GET, &path, None).await.json(), json!([]));
+
     let unknown = format!("/v1/bots/{}/grants", uuid::Uuid::now_v7());
     assert_eq!(
         call(&t, Method::GET, &unknown, None).await.status,
@@ -2406,7 +2457,7 @@ async fn providers_detected_reports_five_rows_without_the_retired_gemini_cli() {
     assert_eq!(r.status, StatusCode::OK);
     let list = r.json();
     let items = list.as_array().unwrap();
-    assert_eq!(items.len(), 8);
+    assert_eq!(items.len(), 9);
     let ids: Vec<&str> = items
         .iter()
         .map(|item| item["id"].as_str().unwrap())
@@ -2414,7 +2465,7 @@ async fn providers_detected_reports_five_rows_without_the_retired_gemini_cli() {
     assert_eq!(
         ids,
         vec![
-            "claude", "codex", "cursor", "opencode", "agy", "qwen", "copilot", "kiro"
+            "claude", "codex", "cursor", "opencode", "agy", "qwen", "copilot", "kiro", "kimi"
         ]
     );
     for row in items {
@@ -4831,4 +4882,121 @@ async fn health_contract_fixture_matches_the_real_reply() {
             serde_json::from_value(body).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert!(accepted.contains(&dto.status.as_str()), "{name}");
     }
+}
+
+#[tokio::test]
+async fn favicon_endpoint_validates_and_serves_cached_icon() {
+    let png = [
+        0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, b'I', b'H', b'D',
+        b'R',
+    ];
+    let t = setup_with(|dir| {
+        let cache = dir.join("cache").join("favicons");
+        std::fs::create_dir_all(&cache).unwrap();
+        std::fs::write(cache.join("example.com.png"), png).unwrap();
+    });
+
+    // Requires authentication.
+    let unauth = send(&t.app, Method::GET, "/v1/favicons/example.com", None, &[]).await;
+    assert_eq!(unauth.status, StatusCode::UNAUTHORIZED);
+
+    // Owner-only: the general API token (a CLI engine, an MCP client, a script) is refused,
+    // and so is every paired peer role (see `peers_never_fetch_favicons`).
+    let token_only = call_token_only(&t, Method::GET, "/v1/favicons/example.com", None).await;
+    assert_eq!(token_only.status, StatusCode::FORBIDDEN);
+    assert_eq!(token_only.json()["error"]["code"], "owner_key_required");
+
+    // A host nobody approved is answered `404` without any network access (nothing is cached
+    // for it and the daemon has no grant for it): this must come back at once, offline.
+    let unknown = call(
+        &t,
+        Method::GET,
+        "/v1/favicons/leak-abc123.attacker.example",
+        None,
+    )
+    .await;
+    assert_eq!(unknown.status, StatusCode::NOT_FOUND);
+
+    // Rejects non-public domains, IPs and bare labels.
+    for bad in ["localhost", "127.0.0.1", "intranet.local", "singlelabel"] {
+        let r = call(&t, Method::GET, &format!("/v1/favicons/{bad}"), None).await;
+        assert_eq!(r.status, StatusCode::BAD_REQUEST, "{bad}");
+    }
+
+    // Serves cached icon directly from local cache with safe headers.
+    let res = call(&t, Method::GET, "/v1/favicons/Example.COM", None).await;
+    assert_eq!(res.status, StatusCode::OK);
+    assert_eq!(
+        res.headers
+            .get("content-type")
+            .and_then(|v| v.to_str().ok()),
+        Some("image/png")
+    );
+    assert_eq!(
+        res.headers
+            .get("x-content-type-options")
+            .and_then(|v| v.to_str().ok()),
+        Some("nosniff")
+    );
+    assert_eq!(res.body.as_slice(), &png);
+}
+
+#[tokio::test]
+async fn grant_revocation_requires_owner_key() {
+    let t = setup();
+    let (bot, chat) = make_chat(&t).await;
+    let bot_path = format!("/v1/bots/{bot}");
+
+    let run = send_msg(
+        &t,
+        &chat,
+        r#"call:browser_open {"url": "https://webioo.com.tr/"}"#,
+        "queue",
+    )
+    .await["run_id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let (call_id, _) = pending_call(&t).await;
+
+    // A token holder without the owner key cannot decide an approval or revoke a grant.
+    let no_owner = call_token_only(
+        &t,
+        Method::POST,
+        &format!("/v1/approvals/{call_id}"),
+        Some(json!({"decision": "approve", "scope": "always"})),
+    )
+    .await;
+    assert_eq!(no_owner.status, StatusCode::FORBIDDEN);
+    assert_eq!(no_owner.json()["error"]["code"], "owner_key_required");
+
+    let ok = call(
+        &t,
+        Method::POST,
+        &format!("/v1/approvals/{call_id}"),
+        Some(json!({"decision": "approve", "scope": "always"})),
+    )
+    .await;
+    assert_eq!(ok.status, StatusCode::OK);
+    wait_state(&t, &run, "succeeded").await;
+
+    let body = json!({"target": {"kind": "scoped", "tool": "browser_open", "scope": "origin", "pattern": "https://webioo.com.tr:443"}});
+    let deny = call_token_only(
+        &t,
+        Method::DELETE,
+        &format!("{bot_path}/grants"),
+        Some(body.clone()),
+    )
+    .await;
+    assert_eq!(deny.status, StatusCode::FORBIDDEN);
+    assert_eq!(deny.json()["error"]["code"], "owner_key_required");
+
+    let revoke = call(
+        &t,
+        Method::DELETE,
+        &format!("{bot_path}/grants"),
+        Some(body),
+    )
+    .await;
+    assert_eq!(revoke.status, StatusCode::NO_CONTENT);
 }

@@ -1484,6 +1484,23 @@
         "tools": "Werkzeuge"
       },
       "commandShortened": "Befehl gekürzt: Es werden nur die ersten {{shown}} Zeichen angezeigt.",
+      "compact": {
+        "allow": "Erlauben",
+        "alwaysSite": "Immer erlauben",
+        "alwaysTool": "Immer erlauben",
+        "controlGrant": "Bildschirm- & Tastatursteuerung teilen",
+        "deletePath": "{{path}} löschen",
+        "openSite": "{{site}} öffnen",
+        "openSite_idn": "{{site}} öffnen (internationale Adresse, genau prüfen)",
+        "openSite_mixed": "{{site}} öffnen (mischt Alphabete, kann eine andere Seite nachahmen)",
+        "runCommand": "Ausführen: {{command}}",
+        "schedule": {
+          "create": "Zeitplan erstellen: \"{{name}}\"",
+          "delete": "Zeitplan löschen: \"{{name}}\"",
+          "edit": "Zeitplan aktualisieren: \"{{name}}\""
+        },
+        "sendMail": "E-Mail an {{to}} senden"
+      },
       "computer": "Diese Aktion läuft auf {{kind}} „{{name}}“ (ID {{id}}).",
       "control": {
         "button": "Diese Aufgabe: {{program}}",
@@ -5169,8 +5186,9 @@
     },
     "permissions": {
       "description": "Was jeder Bot gerade tun darf, einschließlich der „Immer erlauben“-Regeln, die du über Genehmigungskarten erteilt hast.",
-      "grantCategory": "Immer jedes {{name}}-Werkzeug erlauben",
-      "grantScoped": "{{tool}} für {{target}} immer erlauben",
+      "grantCategory": "Kategorie: {{name}}",
+      "grantScoped": "{{tool}} ({{scope}})",
+      "grantSite": "{{site}} immer öffnen",
       "grantTool": "{{name}} immer erlauben",
       "inertGrant": "Inaktiv: Diese Regel ist an keinen Computer gebunden und gilt nicht mehr.",
       "mode": "Modus: {{mode}}",
@@ -5203,6 +5221,10 @@
       "defaultModel": "Standardmodell",
       "description": "API-Schlüssel werden im Schlüsselbund deines Betriebssystems gespeichert. Änderungen übernimmt der Hintergrunddienst ohne Neustart.",
       "disabled": "Deaktiviert",
+      "keyHelp": {
+        "mistral": "Mistral braucht einen API-Schlüssel von La Plateforme (console.mistral.ai). Ein Le-Chat-Abo ist kein API-Schlüssel und funktioniert hier nicht.",
+        "open": "Mistral-Schlüssel erstellen"
+      },
       "keyHint": "Der Schlüssel wird an den Schlüsselbund des Betriebssystems gesendet und nie wieder angezeigt.",
       "keyStored": "Schlüssel gespeichert",
       "localDaemonOnly": "Die Anbietereinrichtung ist für den von dieser App gestarteten lokalen Hintergrunddienst verfügbar. Verwalte bei anderen Verbindungen die Anbieter auf dem Computer, auf dem der Hintergrunddienst läuft.",
@@ -5731,6 +5753,11 @@
       "providers": "Ändere das nur, wenn dir jemand genaue Angaben gegeben hat. Ein falscher Eintrag kann verhindern, dass deine Bots antworten."
     },
     "safety": {
+      "allowedGrants": {
+        "description": "Websites und Tools, die ein Bot ohne erneute Rückfrage nutzen darf. Entziehen Sie jederzeit eine Freigabe.",
+        "empty": "Noch keine dauerhaften Website- oder Aktionsfreigaben. Wählen Sie in einer Bestätigungskarte „Immer erlauben“, um eine hinzuzufügen.",
+        "title": "Erlaubte Websites und Aktionen"
+      },
       "custom": "Du hast eigene Regeln (siehe Erweitert). Wähle eine Stufe, um sie zu ersetzen.",
       "description": "Wähle, wie viel Freiheit deine Bots haben. Du kannst es jederzeit ändern.",
       "lead": "Wähle eine Stufe. Jeder Bot folgt ihr, außer du hast ihm eigene Regeln gegeben.",
