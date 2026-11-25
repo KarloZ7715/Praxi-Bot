@@ -4663,7 +4663,7 @@
     "autonomyCustom": "Se usa el perfil de permisos «{{preset}}».",
     "autonomyHints": {
       "ask": "Lee archivos, consulta la pantalla y busca en internet sin preguntar. Pide permiso antes de cada cambio, envío, carga de una página, clic o ejecución de un comando.",
-      "auto": "Actúa sin preguntar, incluso al borrar, ejecutar comandos o enviar contenido. Sigue pidiendo permiso para gastar dinero, activar tareas programadas o ejecutar comandos catastróficos. Tras leer contenido no confiable, también pide permiso antes de enviar datos fuera del equipo o iniciar un programa. Las acciones dentro de un navegador conectado (Playwright) solo requieren aprobación si la tarea también leyó contenido privado. Ejecutar código fuera de la página y transferir archivos siempre requiere aprobación.",
+      "auto": "Actúa sin preguntar, incluso al borrar, ejecutar comandos o enviar contenido. Sigue pidiendo permiso para enviar correo, gastar dinero, activar tareas programadas o ejecutar comandos catastróficos. Tras leer contenido no confiable, también pide permiso antes de enviar datos fuera del equipo o iniciar un programa. Las acciones dentro de un navegador conectado (Playwright) solo requieren aprobación si la tarea también leyó contenido privado. Ejecutar código fuera de la página y transferir archivos siempre requiere aprobación.",
       "balanced": "Puede leer, navegar, editar archivos del espacio de trabajo y usar su propio equipo sin preguntar. Pide permiso antes de borrar archivos, enviar contenido, gastar dinero o usar tu equipo."
     },
     "autonomyLevels": {
@@ -6437,7 +6437,7 @@
     "alreadyIncluded": "Ya viene incluida en Praxi",
     "alreadyInstalled": "Ya está instalada",
     "back": "Volver",
-    "boundary": "Una habilidad solo le da instrucciones a un bot. Todo lo que haga el bot sigue sujeto a tus permisos y siempre te pide aprobación antes de los pasos de riesgo.",
+    "boundary": "Una habilidad solo le da instrucciones a un bot. Sus acciones siguen los permisos que configuraste para el bot. Según esos permisos, puede borrar archivos o ejecutar ciertos comandos sin preguntar.",
     "browseEmpty": "Esta lista aún no tiene habilidades.",
     "checkUpdate": "Buscar actualización",
     "customActive": "Estás viendo la lista de habilidades de {{url}}. Añade solo habilidades de personas en las que confíes.",
