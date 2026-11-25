@@ -452,7 +452,7 @@
       "badLine": "Esta línea no tiene el formato clave: valor ({{detail}}).",
       "badWhen": "El bloque «when» no es válido cerca de «{{detail}}». Usa domains, apps o keywords con una lista como [a, b].",
       "duplicateKey": "La clave «{{detail}}» aparece dos veces.",
-      "emptyVersion": "El campo version está presente, pero está vacío.",
+      "emptyVersion": "El campo `version` está presente, pero está vacío.",
       "noFrontmatter": "El archivo debe comenzar con una línea --- seguida de name y description.",
       "title": "Este archivo no es una habilidad válida",
       "tooLarge": "El archivo supera los 64 KB.",
@@ -1236,7 +1236,7 @@
     "preset": {
       "approve-destructive": {
         "hint": "Puede leer, navegar, editar archivos del espacio de trabajo y usar su propio equipo sin preguntar. Pide permiso antes de borrar, enviar, gastar dinero o usar tu equipo.",
-        "name": "Aprobar acciones delicadas"
+        "name": "Aprobar acciones destructivas"
       },
       "custom": {
         "hint": "Elige un nivel para cada categoría.",
@@ -1244,7 +1244,7 @@
       },
       "full": {
         "hint": "Actúa sin preguntar, incluso al borrar. Pide permiso para las acciones de la categoría Dinero, el envío de correo y la activación de tareas programadas. Los comandos catastróficos nunca se aprueban automáticamente. Si tú inicias la ejecución, también puede navegar por cualquier sitio público, registrarse y rellenar formularios sin preguntar, incluso después de leer una página. En ese caso, solo vuelve a pedir permiso si la ejecución contiene datos privados tuyos (archivos, correo o memoria) y un sitio nuevo o formulario incluye parte de esos datos, si necesita un secreto guardado, si va a ejecutar un script en una página o si va a iniciar un programa después de leer contenido no confiable.",
-        "name": "Acceso completo"
+        "name": "Full"
       },
       "read-and-draft": {
         "hint": "Puede leer sin preguntar. Pide permiso antes de cada cambio, envío, carga de una página, clic o ejecución de un comando.",
