@@ -136,6 +136,9 @@ import type {
   McpAuthStart,
   McpTestResult,
   McpServer,
+  McpBundleInspection,
+  McpRegistryResult,
+  McpRegistryApproval,
   McpServerPatch,
   McpServerConfig,
   McpTool,
@@ -558,7 +561,7 @@ export class ApiClient {
   protected async request<T>(
     method: string,
     path: string,
-    opts: { body?: unknown; query?: Query; auth?: boolean; signal?: AbortSignal; noTimeout?: boolean; headers?: Record<string, string>; raw?: Blob; keepalive?: boolean; localOwnerOnly?: boolean } = {}
+    opts: { body?: unknown; query?: Query; auth?: boolean; signal?: AbortSignal; noTimeout?: boolean; headers?: Record<string, string>; raw?: Blob | FormData; keepalive?: boolean; localOwnerOnly?: boolean } = {}
   ): Promise<T> {
     const res = await this.send(method, path, opts);
     if (res.status === 204) {
@@ -596,7 +599,7 @@ export class ApiClient {
       noTimeout?: boolean;
       headers?: Record<string, string>;
       /** A file body, sent as is (the attachment upload); `body` stays JSON. */
-      raw?: Blob;
+      raw?: Blob | FormData;
       /** Let the request finish while the page is closing or reloading. */
       keepalive?: boolean;
       localOwnerOnly?: boolean;
@@ -625,7 +628,7 @@ export class ApiClient {
     }
     if (opts.body !== undefined) {
       headers["Content-Type"] = "application/json";
-    } else if (opts.raw !== undefined) {
+    } else if (opts.raw instanceof Blob) {
       headers["Content-Type"] = "application/octet-stream";
     }
     let res: Response;
@@ -1761,6 +1764,25 @@ export class ApiClient {
   }
   mcpCatalog(): Promise<McpCatalogEntry[]> {
     return this.request("GET", "/mcp/catalog");
+  }
+  searchMcpRegistry(q: string, signal?: AbortSignal): Promise<McpRegistryResult[]> {
+    return this.request("GET", "/mcp/import/registry", { query: { q }, signal });
+  }
+  installMcpRegistry(input: McpRegistryApproval, signal?: AbortSignal): Promise<McpServer> {
+    return this.request("POST", "/mcp/import/registry", { body: input, signal });
+  }
+  inspectMcpBundle(file: Blob, checksum: string, signal?: AbortSignal): Promise<McpBundleInspection> {
+    return this.request("POST", "/mcp/import/bundle/inspect", {
+      raw: file,
+      query: checksum ? { expected_sha256: checksum } : undefined,
+      signal
+    });
+  }
+  installMcpBundle(file: File, sha256: string, launchSha256: string, values: Record<string, string>, signal?: AbortSignal): Promise<McpServer> {
+    const form = new FormData();
+    form.append("bundle", file);
+    form.append("approval", JSON.stringify({ approval_sha256: sha256, launch_sha256: launchSha256, values }));
+    return this.request("POST", "/mcp/import/bundle", { raw: form, signal });
   }
   /**
    * Start a sign-in. With `relayPort` the browser is on THIS computer while the daemon is on a
