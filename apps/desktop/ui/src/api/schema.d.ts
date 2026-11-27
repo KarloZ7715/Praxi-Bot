@@ -5692,6 +5692,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/voice/synthesize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Synthesize speech on this computer (local owner only). */
+        post: operations["synthesize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voice/transcribe": {
         parameters: {
             query?: never;
@@ -5701,7 +5718,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Transcribe a recording with the configured service (owner-triggered dictation). */
+        /**
+         * Transcribe a recording with the configured service (owner-triggered dictation).
+         * @description With `local_only` the daemon refuses (409) unless the provider is on-device, so the recording
+         *     is never uploaded. A paired peer cannot use the host's on-device engine (403): decoding and
+         *     recognition burn the host's CPU for up to two minutes and would starve the owner's own dictation.
+         */
         post: operations["transcribe"];
         delete?: never;
         options?: never;
@@ -10097,6 +10119,7 @@ export interface components {
             last_error?: string | null;
             /** @description Models the owner can install. */
             models: components["schemas"]["LocalVoiceModelDto"][];
+            tts_model?: null | components["schemas"]["LocalVoiceModelDto"];
             /** @description Whether the voice-activity model (end-of-speech detection) is installed. */
             vad_installed: boolean;
         };
@@ -13070,6 +13093,13 @@ export interface components {
             username?: string | null;
             /** @description The secret (write-only). */
             value?: string | null;
+        };
+        /** @description Text and app language for local synthesis (`POST /v1/voice/synthesize`). */
+        SynthesizeInput: {
+            /** @description App language (BCP 47, e.g. `tr` or `en-US`). */
+            language: string;
+            /** @description Plain text, at most 1,000 Unicode characters. */
+            text: string;
         };
         TakeoverAccepted: {
             /** Format: int64 */
@@ -27798,6 +27828,83 @@ export interface operations {
             };
         };
     };
+    synthesize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SynthesizeInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/wav": number[];
+                };
+            };
+            /** @description invalid text or language */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description local owner required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description offline read-aloud is not installed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description offline voice is busy */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description offline synthesis failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description voice is not available */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     transcribe: {
         parameters: {
             query?: never;
@@ -27828,8 +27935,26 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description dictation is not set up */
+            /** @description on-device dictation is for the local owner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description dictation is not set up, or `local_only` and the provider is not on-device */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description offline voice is busy */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
