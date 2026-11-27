@@ -22,6 +22,7 @@ use crate::data_routes;
 use crate::doctor;
 use crate::doctor_routes;
 use crate::dto;
+use crate::elicitation_routes;
 use crate::email;
 use crate::email_channel;
 use crate::email_routes;
@@ -200,6 +201,8 @@ impl Modify for Security {
         fill_routes::reveal_fill_secret,
         fill_routes::revoke_fill_grant,
         fill_routes::update_fill_secret,
+        elicitation_routes::answer_elicitation,
+        elicitation_routes::cancel_elicitation,
         handover_routes::cancel_handover,
         handover_routes::finish_handover_done,
         handover_routes::submit_handover_code,
@@ -690,6 +693,9 @@ impl Modify for Security {
         fill_routes::RevealFillSecretResponse,
         fill_routes::UpdateFillSecret,
         fill_routes::VaultKindDto,
+        elicitation_routes::AnswerElicitation,
+        elicitation_routes::ElicitationAction,
+        elicitation_routes::ElicitationOutcome,
         handover_routes::HandoverAnswer,
         handover_routes::SubmitHandoverCode,
         secret_request_routes::SecretRequestAnswer,

@@ -2423,6 +2423,10 @@ export class MockApiClient extends ApiClient {
           : typeof window !== "undefined" && new URLSearchParams(window.location.search).get("screen")?.startsWith("approval-schedule")
           ? [{ call_id: "mock-sch", run_id: "mock-live", requested_at_ms: Date.now() - 3000, decision: null, tool_name: "schedule_create", summary: "Create a schedule" }]
           : []);
+      case "POST /elicitations": {
+        const action = (opts.body as { action?: string } | undefined)?.action;
+        return ok({ call_id: seg[1] ?? "", outcome: seg[2] === "cancel" ? "cancelled" : action === "decline" ? "declined" : "accepted" });
+      }
       case "POST /approvals":
         return ok({ call_id: seg[1] ?? "", decision: (opts.body as { decision?: string } | undefined)?.decision ?? "approve" });
       case "GET /runs":
@@ -3938,7 +3942,7 @@ function mockMissionChat(ended: boolean, tr: boolean): Message[] {
 function mockLiveRunId(): string | null {
   if (typeof window === "undefined") return null;
   const screen = new URLSearchParams(window.location.search).get("screen");
-  return screen === "working" || screen === "mission" || screen === "approval" || screen === "approval-site" || screen === "subagents" || screen === "notifications" ? "mock-live" : null;
+  return screen === "working" || screen === "mission" || screen === "approval" || screen === "approval-site" || screen === "subagents" || screen === "notifications" || screen === "elicitation" ? "mock-live" : null;
 }
 
 /** Review-state events for `?mock=1&screen=...` (approval, streaming, default run). */
@@ -3946,7 +3950,7 @@ export function mockReviewEvents(): { ts_ms: number; event: GlobalEnvelope["even
   const out: { ts_ms: number; event: GlobalEnvelope["event"] }[] = [];
   const screen = new URLSearchParams(window.location.search).get("screen");
   if (screen === "long-chat") return longChatEvents();
-  if (screen === "approval" || screen === "approval-site" || screen?.startsWith("approval-schedule") || screen === "streaming" || screen === "working" || screen === "mission" || screen === "subagents" || screen === "notifications") {
+  if (screen === "approval" || screen === "approval-site" || screen?.startsWith("approval-schedule") || screen === "streaming" || screen === "working" || screen === "mission" || screen === "subagents" || screen === "notifications" || screen === "elicitation") {
     const bot_id = "11111111-1111-4111-8111-111111111111";
     const chat_id = "33333333-3333-4333-8333-333333333333";
     const events: GlobalEnvelope["event"][] = [
@@ -3991,6 +3995,24 @@ export function mockReviewEvents(): { ts_ms: number; event: GlobalEnvelope["even
       ...(screen === "approval" ? [
         { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-rm", tool_name: "shell.run", input: { command: "rm -rf ./drafts/old" } },
         { type: "approval_needed", run_id: "mock-live", call_id: "mock-rm", tool_name: "shell.run", input: { command: "rm -rf ./drafts/old" }, summary: "drafts/old klasörünü ve içindeki 14 dosyayı sil" }
+      ] as GlobalEnvelope["event"][] : []),
+      ...(screen === "elicitation" ? [
+        { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-crm", tool_name: "acme-crm.create_trial", input: {} },
+        {
+          type: "elicitation_requested",
+          run_id: "mock-live",
+          call_id: "8f1c2d3e-4b5a-4c6d-8e7f-901234567890",
+          server: "acme-crm",
+          message: "Deneme hesabını açmak için birkaç bilgiye ihtiyacım var. Koşullar: https://acme-crm.example/terms (açılmaz).",
+          expires_in_secs: 600,
+          fields: [
+            { name: "email", title: "E-posta", description: "Hesap bu adrese açılır.", type: "string", required: true, format: "email" },
+            { name: "seats", title: "Kullanıcı sayısı", description: null, type: "integer", required: false, minimum: 1, maximum: 9, default: 3 },
+            { name: "plan", title: "Paket", description: null, type: "string", required: true, options: [{ value: "starter", label: "Starter" }, { value: "team", label: "Team" }, { value: "business", label: "Business" }] },
+            { name: "newsletter", title: "Ürün haberlerini e-postayla gönder", description: null, type: "boolean", required: false },
+            { name: "api_key", title: "API anahtarı", description: "Ayrıntılar: www.acme-crm.example/keys", type: "string", required: false, blocked: true }
+          ]
+        }
       ] as GlobalEnvelope["event"][] : []),
       ...(screen === "approval-site" ? [
         { type: "tool_call_requested", run_id: "mock-live", call_id: "mock-site", tool_name: "browser_open", input: { url: "https://webioo.com.tr/dashboard" } },

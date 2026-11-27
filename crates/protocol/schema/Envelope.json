@@ -83,6 +83,118 @@
         }
       }
     },
+    "ElicitationField": {
+      "description": "One input of an MCP elicitation form. Every text here comes from the MCP server: untrusted, shown as plain text, never as markup.",
+      "type": "object",
+      "required": [
+        "name",
+        "required",
+        "type"
+      ],
+      "properties": {
+        "blocked": {
+          "description": "A suspected credential field (password, token, one-time code, card or API key, by name, title or description): shown as blocked and never submitted, whatever the server asks. Set by the daemon, never by the server.",
+          "type": "boolean"
+        },
+        "default": {
+          "description": "The server's default value: the only value a form may prefill."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "description": "`email`, `uri`, `date` or `date-time` for a `string` field.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_length": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "maximum": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "min_length": {
+          "description": "Length bounds of a `string` field, in characters.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "minimum": {
+          "description": "Bounds of a `number` / `integer` field.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "name": {
+          "description": "Property name, the key of the answer.",
+          "type": "string"
+        },
+        "options": {
+          "description": "Allowed values of a choice field (empty: free input).",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ElicitationOption"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "$ref": "#/definitions/ElicitationFieldType"
+        }
+      }
+    },
+    "ElicitationFieldType": {
+      "description": "The value type of one [`ElicitationField`]. A choice list is a `string` field with [`ElicitationField::options`].",
+      "type": "string",
+      "enum": [
+        "string",
+        "number",
+        "integer",
+        "boolean"
+      ]
+    },
+    "ElicitationOption": {
+      "description": "One choice of an enum field: the value sent back and the label shown.",
+      "type": "object",
+      "required": [
+        "label",
+        "value"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
     "Event": {
       "description": "All events that can appear in the client event stream.",
       "oneOf": [
@@ -567,6 +679,56 @@
             "untrusted_content": {
               "description": "The run has already read untrusted content (a page): the card warns that a fake prompt on a page can ask for a code.",
               "type": "boolean"
+            }
+          }
+        },
+        {
+          "description": "An MCP server asked the owner for input during one of its tool calls (elicitation); the run waits until the owner submits, declines or cancels the form on the local desktop, or the request expires. The event carries the form and NEVER an answer: the owner's app posts it straight to the daemon (`POST /v1/elicitations/{call_id}`), which hands it to the server only. The model, the journal and the logs never see it.",
+          "type": "object",
+          "required": [
+            "call_id",
+            "expires_in_secs",
+            "fields",
+            "message",
+            "run_id",
+            "server",
+            "type"
+          ],
+          "properties": {
+            "call_id": {
+              "description": "Id to answer or cancel with (its own id, not a model tool call).",
+              "type": "string",
+              "format": "uuid"
+            },
+            "expires_in_secs": {
+              "description": "Seconds until the request expires on its own (0: no limit).",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ElicitationField"
+              }
+            },
+            "message": {
+              "description": "The server's message. Untrusted plain text, never markup.",
+              "type": "string"
+            },
+            "run_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "server": {
+              "description": "The MCP server that asks (its configured id).",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "elicitation_requested"
+              ]
             }
           }
         },

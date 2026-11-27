@@ -349,6 +349,7 @@ pub const PEER_DENIED_FILL_PREFIXES: &[&str] = &[
     "/v1/fill-grants",
     "/v1/secret-requests",
     "/v1/handovers",
+    "/v1/elicitations",
 ];
 
 /// MCP server management starts programs and names host secrets: a mutation

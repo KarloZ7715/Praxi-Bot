@@ -282,6 +282,83 @@ pub struct HandoverRequested {
     pub expires_in_secs: u64,
 }
 
+// ── MCP elicitation ───────────────────────────────────────────────────────────
+
+/// The value type of one [`ElicitationField`]. A choice list is a `string`
+/// field with [`ElicitationField::options`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ElicitationFieldType {
+    String,
+    Number,
+    Integer,
+    Boolean,
+}
+
+/// One choice of an enum field: the value sent back and the label shown.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ElicitationOption {
+    pub value: String,
+    pub label: String,
+}
+
+/// One input of an MCP elicitation form. Every text here comes from the MCP
+/// server: untrusted, shown as plain text, never as markup.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ElicitationField {
+    /// Property name, the key of the answer.
+    pub name: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    #[serde(rename = "type")]
+    pub kind: ElicitationFieldType,
+    pub required: bool,
+    /// Allowed values of a choice field (empty: free input).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<ElicitationOption>,
+    /// Bounds of a `number` / `integer` field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<f64>,
+    /// Length bounds of a `string` field, in characters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_length: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_length: Option<u32>,
+    /// `email`, `uri`, `date` or `date-time` for a `string` field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// The server's default value: the only value a form may prefill.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<Value>,
+    /// A suspected credential field (password, token, one-time code, card or
+    /// API key, by name, title or description): shown as blocked and never
+    /// submitted, whatever the server asks. Set by the daemon, never by the server.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub blocked: bool,
+}
+
+/// An MCP server asked the owner for input during one of its tool calls
+/// (elicitation); the run waits until the owner submits, declines or cancels
+/// the form on the local desktop, or the request expires. The event carries
+/// the form and NEVER an answer: the owner's app posts it straight to the
+/// daemon (`POST /v1/elicitations/{call_id}`), which hands it to the server
+/// only. The model, the journal and the logs never see it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ElicitationRequested {
+    pub run_id: RunId,
+    /// Id to answer or cancel with (its own id, not a model tool call).
+    pub call_id: ToolCallId,
+    /// The MCP server that asks (its configured id).
+    pub server: String,
+    /// The server's message. Untrusted plain text, never markup.
+    pub message: String,
+    pub fields: Vec<ElicitationField>,
+    /// Seconds until the request expires on its own (0: no limit).
+    pub expires_in_secs: u64,
+}
+
 // ── Model fallback ────────────────────────────────────────────────────────────
 
 /// The loop switched to a fallback model after the previous one kept failing.
@@ -479,6 +556,7 @@ pub enum Event {
     QuestionAsked(QuestionAsked),
     SecretRequested(SecretRequested),
     HandoverRequested(HandoverRequested),
+    ElicitationRequested(ElicitationRequested),
     ModelFallback(ModelFallback),
     RouteDecided(RouteDecided),
     WorkflowStepStarted(WorkflowStepStarted),

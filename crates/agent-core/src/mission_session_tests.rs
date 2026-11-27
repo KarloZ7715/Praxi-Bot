@@ -953,6 +953,56 @@ async fn a_mission_form_expires_by_itself_and_leaves_the_item_parked() {
     );
 }
 
+#[tokio::test]
+async fn an_mcp_form_in_a_mission_session_parks_the_item_without_opening_a_form() {
+    use crate::tests::elicitation::{form_call, register_form};
+
+    let w = world(&["a.example", "b.example"]);
+    let fake = Fake::new(vec![
+        calls(&[(
+            "c0",
+            "mission_item",
+            json!({"key": "a.example", "status": "doing"}),
+        )]),
+        form_call("c1"),
+        text("I continued with the other item."),
+    ]);
+    let lp = lp_with(&w, &fake, |_| {});
+    let seen = register_form(&lp);
+    let run = lp
+        .run_mission_session(w.env.chat, &w.mission, "brief")
+        .unwrap();
+    assert_eq!(lp.wait(run).await.unwrap(), RunState::Succeeded);
+    // The server got `cancel` (not a silent decline) and the model was told why.
+    assert!(matches!(
+        seen.lock().as_slice(),
+        [tool_registry::ElicitationAnswer::Parked(_)]
+    ));
+    let blocked = w
+        .store
+        .items(&w.mission, Some(ItemStatus::Blocked))
+        .unwrap();
+    assert_eq!(blocked.len(), 1);
+    assert_eq!(blocked[0].key, "a.example");
+    assert!(
+        blocked[0]
+            .blocked_reason
+            .as_deref()
+            .unwrap()
+            .contains("acme")
+    );
+    let told = crate::tests::tool_messages(&without_ledger(fake.request(2))).join("\n");
+    assert!(told.contains("parked as blocked"), "{told}");
+    let journal = storage::read_event_log(w.env.storage.data_dir(), run).unwrap();
+    assert!(
+        journal
+            .iter()
+            .all(|item| !matches!(item.event, protocol::Event::ElicitationRequested(_)))
+    );
+    let audit = format!("{:?}", w.env.storage.list_audit(w.env.user).unwrap());
+    assert!(audit.contains("elicitation.parked"));
+}
+
 /// A `browser_handover` whose card asks the owner for a 2FA code.
 struct CodeTool(ToolSpec);
 

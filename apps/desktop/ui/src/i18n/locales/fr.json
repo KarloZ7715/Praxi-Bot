@@ -2713,6 +2713,39 @@
     "totalCost": "Coût : {{cost}}",
     "waiting": "En attente de vous : {{count}}"
   },
+  "elicitation": {
+    "banner": "Demandé par le serveur MCP {{server}} — pas par Praxi",
+    "blocked": "Bloqué : ressemble à un identifiant, jamais envoyé",
+    "blockedRequired": "Ce formulaire exige un champ qui ressemble à un identifiant. Praxi n'envoie jamais de mots de passe, clés d'accès, codes ni numéros de carte à un serveur MCP, il ne peut donc pas être envoyé. Vous pouvez le refuser ou l'annuler.",
+    "cancel": "Annuler",
+    "choose": "Choisir…",
+    "closed": "Cette demande n'est plus ouverte.",
+    "decline": "Refuser",
+    "expired": "Le délai pour répondre à cette demande est écoulé.",
+    "expiresIn": "Temps restant pour répondre",
+    "externalLink": "lien externe",
+    "externalLinkTitle": "Écrit par le serveur MCP. Praxi ne l'ouvre pas. Vérifiez-le attentivement avant d'y aller vous-même.",
+    "messageLabel": "Message de {{server}} :",
+    "notConnected": "Pas de connexion au service. Rien n'a été envoyé et ce que vous avez saisi est conservé.",
+    "note": "Ce texte vient du serveur MCP {{server}}, pas de Praxi. Vos réponses vont uniquement à ce serveur, pas au bot.",
+    "outcome": {
+      "accepted": "Envoyé. Seul le serveur a reçu vos réponses.",
+      "cancelled": "Annulé.",
+      "declined": "Refusé. Le serveur a été informé que vous ne souhaitiez pas répondre."
+    },
+    "problem": {
+      "blocked": "{{field}} ressemble à un identifiant et n'est jamais envoyé.",
+      "integer": "{{field}} doit être un nombre entier.",
+      "number": "{{field}} doit être un nombre.",
+      "required": "{{field}} est obligatoire.",
+      "tooLarge": "{{field}} doit valoir au plus {{max}}.",
+      "tooLong": "{{field}} peut contenir au plus {{max}} caractères.",
+      "tooShort": "{{field}} doit contenir au moins {{min}} caractères.",
+      "tooSmall": "{{field}} doit valoir au moins {{min}}."
+    },
+    "submit": "Envoyer",
+    "title": "{{server}} demande des informations"
+  },
   "engineConsent": {
     "allow": "Autoriser {{cli}}",
     "blocked": {
@@ -2864,6 +2897,10 @@
       "disabled": {
         "hint": "Activez-le dans Réglages, puis réessayez.",
         "title": "Ceci est désactivé"
+      },
+      "elicitation_gone": {
+        "hint": "Il a reçu une réponse, a été annulé ou a expiré, ou la tâche s'est terminée. Demandez au bot de réessayer si c'est toujours nécessaire.",
+        "title": "Ce formulaire n'est plus ouvert"
       },
       "email_provider_error": {
         "hint": "Vérifiez le compte et le mot de passe, puis réessayez.",

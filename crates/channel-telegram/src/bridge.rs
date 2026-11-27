@@ -646,12 +646,23 @@ impl TelegramChannel {
 
     /// Notify paired users in their private chats. The URI only opens a local chat.
     pub async fn notify_secret_request(&self, chat: protocol::ChatId) {
+        self.notify_open_app(chat, Message::SecretRequestNotice)
+            .await;
+    }
+
+    /// Tell paired users that an MCP server's form waits in the desktop chat. Same
+    /// rules as [`Self::notify_secret_request`]: the form itself never leaves the app.
+    pub async fn notify_elicitation(&self, chat: protocol::ChatId) {
+        self.notify_open_app(chat, Message::ElicitationNotice).await;
+    }
+
+    async fn notify_open_app(&self, chat: protocol::ChatId, message: Message<'_>) {
         if self.status() != ChannelStatus::Running {
             return;
         }
         for user in self.pairing().paired_users() {
             let language = self.language(user);
-            let notice = Message::SecretRequestNotice.render(language);
+            let notice = message.render(language);
             let locale = if language.code() == "tr" { "tr/" } else { "" };
             let launcher = channel_api::DESKTOP_CHAT_LAUNCHER;
             let link = format!("{launcher}{locale}open/#{chat}");

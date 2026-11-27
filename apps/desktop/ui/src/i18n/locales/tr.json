@@ -3541,6 +3541,39 @@
       "xlsx": "Excel"
     }
   },
+  "elicitation": {
+    "banner": "{{server}} MCP sunucusu soruyor — Praxi değil",
+    "blocked": "Engellendi: kimlik bilgisine benziyor, asla gönderilmez",
+    "blockedRequired": "Bu formda kimlik bilgisine benzeyen bir alan zorunlu. Praxi parolaları, erişim anahtarlarını, kodları ve kart numaralarını hiçbir MCP sunucusuna göndermez, bu yüzden form gönderilemez. Reddedebilir ya da iptal edebilirsin.",
+    "cancel": "İptal",
+    "choose": "Seç…",
+    "closed": "Bu istek artık açık değil.",
+    "decline": "Reddet",
+    "expired": "Bu isteğin süresi doldu.",
+    "expiresIn": "Yanıtlamak için kalan süre",
+    "externalLink": "dış bağlantı",
+    "externalLinkTitle": "MCP sunucusu yazdı. Praxi bunu açmaz. Kendin gitmeden önce dikkatle kontrol et.",
+    "messageLabel": "{{server}} sunucusunun mesajı:",
+    "notConnected": "Servise bağlantı yok. Hiçbir şey gönderilmedi, yazdıkların hâlâ burada.",
+    "note": "Bu metin Praxi'den değil, {{server}} MCP sunucusundan geliyor. Yanıtların yalnızca bu sunucuya gider, bot onları görmez.",
+    "outcome": {
+      "accepted": "Gönderildi. Yanıtlarını yalnızca sunucu aldı.",
+      "cancelled": "İptal edildi.",
+      "declined": "Reddedildi. Sunucuya yanıt vermek istemediğin bildirildi."
+    },
+    "problem": {
+      "blocked": "{{field}} kimlik bilgisine benziyor ve asla gönderilmez.",
+      "integer": "{{field}} alanına tam sayı yaz.",
+      "number": "{{field}} alanına bir sayı yaz.",
+      "required": "{{field}} alanı zorunlu.",
+      "tooLarge": "{{field}} en fazla {{max}} olabilir.",
+      "tooLong": "{{field}} en fazla {{max}} karakter olabilir.",
+      "tooShort": "{{field}} en az {{min}} karakter olmalı.",
+      "tooSmall": "{{field}} en az {{min}} olmalı."
+    },
+    "submit": "Gönder",
+    "title": "{{server}} senden bilgi istiyor"
+  },
   "engineConsent": {
     "action": {
       "install": "Kur",
@@ -3710,6 +3743,10 @@
       "disabled": {
         "hint": "Ayarlardan açıp yeniden dene.",
         "title": "Bu özellik kapalı"
+      },
+      "elicitation_gone": {
+        "hint": "Yanıtlandı, iptal edildi, süresi doldu ya da çalışma bitti. Hâlâ gerekiyorsa botun yeniden denemesini iste.",
+        "title": "Bu form artık açık değil"
       },
       "email_provider_error": {
         "hint": "Hesabı ve parolayı kontrol edip yeniden dene.",

@@ -337,6 +337,9 @@ pub const OWNER_ROUTES: &[(&str, &str)] = &[
     ("POST", "/v1/handovers/{}/code"),
     ("POST", "/v1/handovers/{}/done"),
     ("POST", "/v1/handovers/{}/cancel"),
+    // an MCP server's form: the owner's own answer, handed to that server only
+    ("POST", "/v1/elicitations/{}"),
+    ("POST", "/v1/elicitations/{}/cancel"),
     ("POST", "/v1/email/accounts"),
     ("PUT", "/v1/email/accounts/{}"),
     ("DELETE", "/v1/email/accounts/{}"),

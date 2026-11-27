@@ -30,6 +30,7 @@ const LOCAL_ONLY: Record<string, string> = {
   "components/BotPanelWorkspace.tsx": "Enter commits and Escape cancels inline rename and closes preview modal",
   "components/CharacterPicker.tsx": "arrow keys inside the bot shape and color pickers",
   "components/ChatList.tsx": "Enter/Escape in inline rename and arrow keys on chat menu trigger",
+  "components/ElicitationCard.tsx": "Escape cancels the MCP server's form it is typed in (the card shows a Cancel button)",
   "components/HandoverCard.tsx": "Esc cancels the one-time code card (the card shows a Cancel button)",
   "components/ModelHint.tsx": "Esc closes the open model hint (the same Esc as every popover, listed under popoverClose)",
   "components/ContextMenu.tsx": "arrow keys, type-ahead, Esc and Tab inside an open right-click menu (opening it is the contextMenu entry)",

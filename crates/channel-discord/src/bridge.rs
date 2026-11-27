@@ -333,6 +333,16 @@ impl DiscordChannel {
 
     /// Notify only the paired owner, via a private DM, with a navigation-only URI.
     pub async fn notify_secret_request(&self, chat: protocol::ChatId) {
+        self.notify_open_app(chat, Msg::SecretRequestNotice).await;
+    }
+
+    /// Tell the paired owner that an MCP server's form waits in the desktop chat (the
+    /// same private, navigation-only notice; the form never leaves the app).
+    pub async fn notify_elicitation(&self, chat: protocol::ChatId) {
+        self.notify_open_app(chat, Msg::ElicitationNotice).await;
+    }
+
+    async fn notify_open_app(&self, chat: protocol::ChatId, message: Msg<'_>) {
         if !self.is_running() {
             return;
         }
@@ -343,7 +353,7 @@ impl DiscordChannel {
         let result = async {
             let channel = rest.create_dm(&user).await?;
             let language = self.inner.lang();
-            let notice = Msg::SecretRequestNotice.render(language);
+            let notice = message.render(language);
             let locale = if language.code() == "tr" { "tr/" } else { "" };
             let launcher = channel_api::DESKTOP_CHAT_LAUNCHER;
             let link = format!("{launcher}{locale}open/#{chat}");

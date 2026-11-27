@@ -238,6 +238,12 @@ impl McpHost {
         host
     }
 
+    /// Where a server's elicitation form (a question to the owner during one of
+    /// its tool calls) is shown: the agent loop's form card.
+    pub fn set_elicitor(&self, elicitor: Arc<dyn tool_registry::Elicitor>) {
+        self.manager.set_elicitor(elicitor);
+    }
+
     /// Disconnect every server (stdio children exit) and stop the poller.
     pub async fn shutdown(&self) {
         let mut flows = self.auth_flows.lock().await;

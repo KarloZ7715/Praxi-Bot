@@ -109,6 +109,32 @@ files, and the credentials created by the import that no other server uses.
   task also read something private; code outside the page and file transfers
   always ask. Only you can set it (config or the owner-only API). See
   [Security model, item 12a](security.md).
+- **A server that asks you something (elicitation).** While one of its tool
+  calls runs, a server may ask for input, for example an account name or a
+  choice. Praxi shows a form card in the desktop chat and in Pending decisions,
+  headed "Asked by MCP server <name> — not Praxi" (the name is the one in your
+  config); the server's text is shown as plain text, and a web address in it is
+  only marked as an external link, never opened. Only simple forms are
+  supported (text, e-mail, link, date, number, yes/no, one choice from a list);
+  anything else is declined. Nothing is filled in for you. Praxi hands what you
+  type to that server only, never to the bot, the run's history or the logs. If
+  the server repeats it in its tool result, the bot sees it masked. A field that
+  looks like a secret (a password, token, one-time code, card number or API key,
+  in English or Turkish) is shown as blocked and is never sent. Decline tells
+  the server you will not answer, Cancel dismisses the form; a form nobody
+  answers expires with the approval timeout, and never later than 15 minutes
+  (also when the timeout is 0).
+  Only a chat you started at the desktop can show a form, and only the app on
+  this computer can answer it (not a paired device). A scheduled, channel or
+  background run declines at once, and an unattended mission session parks its
+  work item as blocked instead. Limits protect you from a noisy server: 4 forms
+  a minute per server, 3 per run, 16 open at once, at most 20 fields and 20
+  choices, a message under 1 KiB, text fields up to 2000 characters, and field
+  names of letters, digits, `_` and `-`. A form over a limit is declined and
+  noted in the audit log. Telegram and Discord only tell you that a form waits
+  in the app; the form itself never leaves the desktop. This works in the
+  desktop app and `praxi serve`; a terminal-only run has no form screen, so a
+  server's form is declined there.
 - **Who may use it:** `bots` is a list of bot ids (the bot's storage UUID, not
   its profile id), or omitted / `null` for every bot. An empty list `[]` means
   no bot at all, never every bot. A bot that is not listed does not see the

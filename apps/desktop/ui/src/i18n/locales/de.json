@@ -3292,6 +3292,39 @@
       "xlsx": "Excel"
     }
   },
+  "elicitation": {
+    "banner": "Gefragt vom MCP-Server {{server}} — nicht von Praxi",
+    "blocked": "Gesperrt: sieht nach Zugangsdaten aus, wird nie gesendet",
+    "blockedRequired": "Dieses Formular verlangt ein Feld, das nach Zugangsdaten aussieht. Praxi sendet nie Passwörter, Zugangsschlüssel, Codes oder Kartennummern an einen MCP-Server, daher kann es nicht gesendet werden. Du kannst es ablehnen oder abbrechen.",
+    "cancel": "Abbrechen",
+    "choose": "Auswählen…",
+    "closed": "Diese Anfrage ist nicht mehr offen.",
+    "decline": "Ablehnen",
+    "expired": "Die Zeit für diese Anfrage ist abgelaufen.",
+    "expiresIn": "Verbleibende Zeit zum Antworten",
+    "externalLink": "externer Link",
+    "externalLinkTitle": "Vom MCP-Server geschrieben. Praxi öffnet ihn nicht. Prüfe ihn genau, bevor du ihn selbst aufrufst.",
+    "messageLabel": "Nachricht von {{server}}:",
+    "notConnected": "Keine Verbindung zum Dienst. Es wurde nichts gesendet, deine Eingaben sind noch da.",
+    "note": "Dieser Text kommt vom MCP-Server {{server}}, nicht von Praxi. Deine Antworten gehen nur an diesen Server, nicht an den Bot.",
+    "outcome": {
+      "accepted": "Gesendet. Nur der Server hat deine Antworten erhalten.",
+      "cancelled": "Abgebrochen.",
+      "declined": "Abgelehnt. Der Server weiß jetzt, dass du nicht antworten möchtest."
+    },
+    "problem": {
+      "blocked": "{{field}} sieht nach Zugangsdaten aus und wird nie gesendet.",
+      "integer": "{{field}} muss eine ganze Zahl sein.",
+      "number": "{{field}} muss eine Zahl sein.",
+      "required": "{{field}} ist ein Pflichtfeld.",
+      "tooLarge": "{{field}} darf höchstens {{max}} sein.",
+      "tooLong": "{{field}} darf höchstens {{max}} Zeichen haben.",
+      "tooShort": "{{field}} braucht mindestens {{min}} Zeichen.",
+      "tooSmall": "{{field}} muss mindestens {{min}} sein."
+    },
+    "submit": "Senden",
+    "title": "{{server}} bittet um Angaben"
+  },
   "engineConsent": {
     "allow": "{{cli}} erlauben",
     "blocked": {
@@ -3451,6 +3484,10 @@
       "disabled": {
         "hint": "Schalte es in den Einstellungen ein und versuche es dann erneut.",
         "title": "Das ist ausgeschaltet"
+      },
+      "elicitation_gone": {
+        "hint": "Es wurde beantwortet, abgebrochen oder ist abgelaufen, oder der Lauf ist beendet. Bitte den Bot, es erneut zu versuchen, falls es noch nötig ist.",
+        "title": "Dieses Formular ist nicht mehr offen"
       },
       "email_provider_error": {
         "hint": "Prüfe Konto und Passwort und versuche es erneut.",

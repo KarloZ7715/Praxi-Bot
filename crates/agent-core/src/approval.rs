@@ -209,7 +209,7 @@ fn park_key(name: &str, summary: &str) -> String {
 }
 
 /// How a wait for the user ended.
-enum Waited {
+pub(crate) enum Waited {
     Verdict(Result<Verdict, oneshot::error::RecvError>),
     /// A schedule-started run: nobody answered, the run is asked to pause.
     Paused,
@@ -220,7 +220,7 @@ enum Waited {
     Expired,
 }
 
-struct PendingGuard {
+pub(crate) struct PendingGuard {
     sh: Arc<Shared>,
     id: ToolCallId,
     run_id: RunId,
@@ -232,7 +232,7 @@ struct PendingGuard {
 impl PendingGuard {
     /// This park is over: the run goes back to `Running` only when it was the
     /// last one parked (parallel `ask_user` calls share one run).
-    fn resume(&mut self) {
+    pub(crate) fn resume(&mut self) {
         if self.release() {
             self.sh.set_state(self.run_id, RunState::Running);
         }
@@ -263,6 +263,7 @@ impl Drop for PendingGuard {
         // A parked `secret_request` must not stay submittable once its wait is gone.
         self.sh.discard_secret_request(self.id);
         self.sh.handovers.lock().remove(&self.id);
+        self.sh.elicitations.lock().remove(&self.id);
         forget_parked(&self.sh, self.id);
         let abandoned = !self.released;
         let last = self.release();
@@ -2818,7 +2819,7 @@ impl Shared {
         }
     }
 
-    fn park(
+    pub(crate) fn park(
         self: &Arc<Self>,
         ctx: &RunCtx,
         call_id: ToolCallId,
@@ -2872,7 +2873,7 @@ impl Shared {
     /// blocks the mission for the owner).  Any other run waits at most
     /// [`LoopConfig::approval_timeout`](crate::LoopConfig) (zero = no limit);
     /// then the call is denied as expired and the run carries on.
-    async fn wait_verdict(
+    pub(crate) async fn wait_verdict(
         &self,
         ctx: &RunCtx,
         rx: oneshot::Receiver<Verdict>,
@@ -3542,7 +3543,12 @@ impl Shared {
                 );
                 Err(reason)
             }
-            Ok(Verdict::Answered { .. } | Verdict::SecretStored | Verdict::HandoverDone)
+            Ok(
+                Verdict::Answered { .. }
+                | Verdict::SecretStored
+                | Verdict::HandoverDone
+                | Verdict::Elicited(_),
+            )
             | Err(_) => Err(Some("approval request was dropped".into())),
         }
     }
@@ -3709,7 +3715,12 @@ impl Shared {
                 let _ = self.storage.decide_approval(approval_id, "declined");
                 Err(reason)
             }
-            Ok(Verdict::Approved { .. } | Verdict::SecretStored | Verdict::HandoverDone)
+            Ok(
+                Verdict::Approved { .. }
+                | Verdict::SecretStored
+                | Verdict::HandoverDone
+                | Verdict::Elicited(_),
+            )
             | Err(_) => {
                 let _ = self.storage.decide_approval(approval_id, "declined");
                 Err(Some("question was dropped".into()))
@@ -3975,7 +3986,7 @@ fn parked_question_text(question: &str) -> String {
 }
 
 /// What the model reads when a mission session parks an item for the owner instead of waiting.
-fn mission_park_text(key: Option<&str>, reason: &str) -> String {
+pub(crate) fn mission_park_text(key: Option<&str>, reason: &str) -> String {
     match key {
         Some(key) => format!(
             "Not waiting: this is a mission, so a person is not asked right now. Item {key:?} is parked as blocked ({reason}); the owner sees it in the blocked list. Do not retry it. Take the next open item now."

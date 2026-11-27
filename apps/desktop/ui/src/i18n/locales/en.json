@@ -3541,6 +3541,39 @@
       "xlsx": "Excel"
     }
   },
+  "elicitation": {
+    "banner": "Asked by MCP server {{server}} — not Praxi",
+    "blocked": "Blocked: looks like a credential, never sent",
+    "blockedRequired": "This form needs a field that looks like a secret. Praxi never sends passwords, access keys, codes or card numbers to an MCP server, so it cannot be sent. You can decline or cancel it.",
+    "cancel": "Cancel",
+    "choose": "Choose…",
+    "closed": "This request is no longer open.",
+    "decline": "Decline",
+    "expired": "This request ran out of time.",
+    "expiresIn": "Time left to answer",
+    "externalLink": "external link",
+    "externalLinkTitle": "Written by the MCP server. Praxi does not open it. Check it carefully before you go there yourself.",
+    "messageLabel": "Message from {{server}}:",
+    "notConnected": "No connection to the service. Nothing was sent and what you typed is still here.",
+    "note": "This text comes from the MCP server {{server}}, not from Praxi. Your answers go only to that server, not to the bot.",
+    "outcome": {
+      "accepted": "Sent. Only the server received your answers.",
+      "cancelled": "Cancelled.",
+      "declined": "Declined. The server was told you did not want to answer."
+    },
+    "problem": {
+      "blocked": "{{field}} looks like a secret and is never sent.",
+      "integer": "{{field}} must be a whole number.",
+      "number": "{{field}} must be a number.",
+      "required": "{{field}} is required.",
+      "tooLarge": "{{field}} must be at most {{max}}.",
+      "tooLong": "{{field}} can have at most {{max}} characters.",
+      "tooShort": "{{field}} needs at least {{min}} characters.",
+      "tooSmall": "{{field}} must be at least {{min}}."
+    },
+    "submit": "Send",
+    "title": "{{server}} asks for information"
+  },
   "engineConsent": {
     "action": {
       "install": "Install",
@@ -3710,6 +3743,10 @@
       "disabled": {
         "hint": "Turn it on in Settings, then try again.",
         "title": "This is switched off"
+      },
+      "elicitation_gone": {
+        "hint": "It was answered, cancelled or timed out, or the run ended. Ask the bot to try again if it is still needed.",
+        "title": "That form is no longer open"
       },
       "email_provider_error": {
         "hint": "Check the account and password, then try again.",

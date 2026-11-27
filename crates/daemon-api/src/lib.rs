@@ -92,6 +92,7 @@ mod browser_profiles;
 pub mod calendar;
 mod calendar_routes;
 mod data_routes;
+mod elicitation_routes;
 mod embeddings_routes;
 pub mod homeassistant;
 mod homeassistant_routes;
@@ -277,6 +278,9 @@ pub trait ChannelControl: Send + Sync {
     /// Notify the paired owner about a secure form in the local desktop chat.
     /// A chat id is navigation only and conveys no authority or request content.
     async fn notify_secret_request(&self, _chat: protocol::ChatId) {}
+    /// Notify the paired owner that an MCP server's form waits in the local desktop chat.
+    /// Same rule: a chat id is navigation only, and no form text is sent.
+    async fn notify_elicitation(&self, _chat: protocol::ChatId) {}
     /// Current state of the channel.
     fn info(&self) -> dto::ChannelDto;
     /// A fresh one-time pairing code.
@@ -2204,6 +2208,14 @@ fn api_routes() -> Router<AppState> {
         .route(
             "/v1/secret-requests/{call_id}/cancel",
             post(secret_request_routes::cancel_secret_request),
+        )
+        .route(
+            "/v1/elicitations/{call_id}",
+            post(elicitation_routes::answer_elicitation),
+        )
+        .route(
+            "/v1/elicitations/{call_id}/cancel",
+            post(elicitation_routes::cancel_elicitation),
         )
         .route(
             "/v1/handovers/{call_id}/code",

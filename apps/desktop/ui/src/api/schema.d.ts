@@ -2242,6 +2242,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/elicitations/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer an MCP server's form: `accept` with the values, or `decline`. */
+        post: operations["answer_elicitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/elicitations/{call_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss an MCP server's form: the server learns `cancel`. */
+        post: operations["cancel_elicitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/email/accounts": {
         parameters: {
             query?: never;
@@ -6070,6 +6104,12 @@ export interface components {
             /** @description What to do when `secrets_available` is false. */
             secrets_hint?: string | null;
         };
+        /** @description Body of `POST /v1/elicitations/{call_id}`. */
+        AnswerElicitation: {
+            action: components["schemas"]["ElicitationAction"];
+            /** @description Field name to value (`accept` only). Write-only: no route returns it. */
+            content?: Record<string, never>;
+        };
         /** @description `POST /v1/questions/{call_id}`. */
         AnswerQuestion: {
             /** @description The user's answer (free text, or one of the offered options). */
@@ -7845,6 +7885,21 @@ export interface components {
             profile: components["schemas"]["Profile"];
             /** Format: int32 */
             quality: number;
+        };
+        /**
+         * @description What the owner does with the form.
+         * @enum {string}
+         */
+        ElicitationAction: "accept" | "decline";
+        /** @description How a form ended. Never carries an answer. */
+        ElicitationOutcome: {
+            /**
+             * Format: uuid
+             * @description The form that was answered.
+             */
+            call_id: string;
+            /** @description `accepted`, `declined` or `cancelled`. */
+            outcome: string;
         };
         /** @description A configured account (`GET /v1/email/accounts`): the non-secret fields only. */
         EmailAccountDto: {
@@ -19626,6 +19681,99 @@ export interface operations {
             };
             /** @description safe redaction unavailable or the report did not finish in time */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    answer_elicitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id from the elicitation_requested event */
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerElicitation"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElicitationOutcome"];
+                };
+            };
+            /** @description the answer does not fit the form; it keeps waiting */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description not the local owner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description code elicitation_gone: not waiting any more */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    cancel_elicitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Id from the elicitation_requested event */
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElicitationOutcome"];
+                };
+            };
+            /** @description not the local owner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description code elicitation_gone: not waiting any more */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

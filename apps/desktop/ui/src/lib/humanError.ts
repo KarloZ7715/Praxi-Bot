@@ -44,6 +44,7 @@ export const DAEMON_ERROR_CODES = [
   "conflict",
   "could_not_verify",
   "disabled",
+  "elicitation_gone",
   "email_provider_error",
   "engine_owner_only",
   "forbidden",

@@ -380,6 +380,21 @@ export type DaemonEvent =
       expires_in_secs: number;
     }
   | {
+      /**
+       * An MCP server asks the owner for input through a form. `call_id` is the request's own id
+       * (not a model tool call); the card posts to /v1/elicitations/{call_id}. `message` and the
+       * field titles and descriptions are untrusted server text: render as plain text only.
+       */
+      type: "elicitation_requested";
+      run_id: string;
+      call_id: string;
+      server: string;
+      message: string;
+      fields: ElicitationField[];
+      /** 0 = no time limit. */
+      expires_in_secs: number;
+    }
+  | {
       /** A bot asked the owner for a credential. The card posts to /v1/secret-requests/{call_id}; never carries a value. */
       type: "secret_requested";
       run_id: string;
@@ -507,6 +522,40 @@ export interface GlobalEnvelope extends Envelope {
 // ---- Credential requests and the vault (`/v1/secret-requests/*`, `/v1/fill-secrets`) -----
 export type SecretRequestAnswer = S["SecretRequestAnswer"];
 export type HandoverAnswer = S["HandoverAnswer"];
+/** `POST /v1/elicitations/{call_id}` (schema `AnswerElicitation`). */
+export interface AnswerElicitation {
+  action: "accept" | "decline";
+  content: Record<string, string | number | boolean>;
+}
+export type ElicitationOutcome = "accepted" | "declined" | "cancelled";
+export interface ElicitationAnswer {
+  call_id: string;
+  outcome: ElicitationOutcome;
+}
+
+/** One field of an MCP server's form (`elicitation_requested`). */
+export interface ElicitationField {
+  name: string;
+  title: string | null;
+  description: string | null;
+  type: "string" | "number" | "integer" | "boolean";
+  required: boolean;
+  /** Present only for choice fields (type string). */
+  options?: { value: string; label: string }[];
+  minimum?: number;
+  maximum?: number;
+  /** In characters (type string). */
+  min_length?: number;
+  max_length?: number;
+  format?: "email" | "uri" | "date" | "date-time";
+  /** The only value a form may prefill. */
+  default?: unknown;
+  /**
+   * A suspected credential field (password, token, one-time code, card number, API key): shown
+   * as blocked and never submitted. The event JSON leaves it out when false.
+   */
+  blocked?: boolean;
+}
 export type FillSecretInfo = S["FillSecretDto"];
 export type VaultKind = S["VaultKindDto"];
 export type CreateFillSecretInput = S["CreateFillSecret"];

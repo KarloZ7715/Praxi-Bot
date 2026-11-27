@@ -281,6 +281,7 @@ impl AgentLoop {
                 external_source_owner: RwLock::new(None),
                 secret_requests: Mutex::new(HashMap::new()),
                 handovers: Mutex::new(HashMap::new()),
+                elicitations: Mutex::new(HashMap::new()),
                 skill_hints: RwLock::new(None),
                 router: crate::router::Router::default(),
                 directives: Mutex::new(HashMap::new()),
@@ -2240,6 +2241,62 @@ impl AgentLoop {
             .tx
             .send(verdict)
             .map_err(|_| LoopError::NoPendingApproval(call_id))
+    }
+
+    /// The [`tool_registry::Elicitor`] to install into the MCP bridge: a server's
+    /// form is shown to the owner of the run whose tool call is in flight.
+    #[must_use]
+    pub fn elicitor(&self) -> Arc<dyn tool_registry::Elicitor> {
+        Arc::new(crate::elicitation::LoopElicitor {
+            sh: Arc::downgrade(&self.sh),
+        })
+    }
+
+    /// The fields of a parked MCP elicitation form, `None` when none waits under
+    /// `call_id` (the id from `ElicitationRequested`).
+    #[must_use]
+    pub fn elicitation(
+        &self,
+        call_id: ToolCallId,
+    ) -> Option<Vec<protocol::event::ElicitationField>> {
+        self.sh
+            .elicitations
+            .lock()
+            .get(&call_id)
+            .map(|i| i.fields.clone())
+    }
+
+    /// Answer a parked MCP elicitation form. An `Accept` is checked against the
+    /// form first; one that does not fit leaves the form waiting. The answer goes
+    /// to the server only, never to the model.
+    ///
+    /// # Errors
+    /// [`crate::ElicitationRefusal::Gone`] when no form waits (or its run was
+    /// stopped), [`crate::ElicitationRefusal::Invalid`] when the answer does not fit.
+    pub fn finish_elicitation(
+        &self,
+        call_id: ToolCallId,
+        answer: tool_registry::ElicitationAnswer,
+    ) -> std::result::Result<(), crate::ElicitationRefusal> {
+        use crate::ElicitationRefusal::{Gone, Invalid};
+        use tool_registry::ElicitationAnswer::{Accept, Cancel, Parked};
+        let fields = self.elicitation(call_id).ok_or(Gone)?;
+        let answer = match answer {
+            Accept(content) => {
+                self.refuse_if_stopped(call_id).map_err(|_| Gone)?;
+                let redactor = self.sh.cfg.redactor.as_ref();
+                Accept(crate::elicitation::validate(&fields, content, redactor).map_err(Invalid)?)
+            }
+            // Only the loop parks a form, never a caller.
+            Parked(_) => Cancel,
+            other => other,
+        };
+        self.sh.elicitations.lock().remove(&call_id);
+        self.take_pending(call_id, &[PendingKind::Elicitation])
+            .map_err(|_| Gone)?
+            .tx
+            .send(Verdict::Elicited(answer))
+            .map_err(|_| Gone)
     }
 
     /// Reconcile portable computer state against this daemon and its paired desktops.

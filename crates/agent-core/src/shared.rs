@@ -685,6 +685,9 @@ pub(crate) enum Verdict {
     /// The owner finished a `browser_handover` (a code was typed into the page, or
     /// the CAPTCHA was solved and the page moved on). Carries nothing.
     HandoverDone,
+    /// The owner answered an MCP elicitation form (checked against the form).
+    /// The content goes back to the server only.
+    Elicited(tool_registry::ElicitationAnswer),
 }
 
 /// What a parked `browser_handover` asks for: facts only, never a code.
@@ -768,6 +771,8 @@ pub(crate) enum PendingKind {
     Secret,
     /// A CAPTCHA or one-time-code handover (`browser_handover`).
     Handover,
+    /// An MCP server's form (elicitation).
+    Elicitation,
 }
 
 /// Browser actions that act on the page open right now: their allowance is bound to its origin.
@@ -873,6 +878,11 @@ pub(crate) struct CtxState {
     pub secret_requests: u32,
     /// `browser_handover` calls this run has made (asked or refused).
     pub handovers: u32,
+    /// MCP server forms this run has been asked for (shown or refused after the owner check).
+    pub elicitations: u32,
+    /// What the owner typed into this run's MCP forms: masked in every tool result of this
+    /// run (a server may echo it). Scoped to the run, never shared or kept.
+    pub elicited: Option<secret_store::Redactor>,
 }
 
 /// Per-run resolved computer placement fixed at run start.
@@ -1201,6 +1211,8 @@ pub(crate) struct Shared {
     pub secret_requests: Mutex<HashMap<ToolCallId, SecretRequestInfo>>,
     /// `browser_handover` calls waiting for the owner (see `approval.rs`).
     pub handovers: Mutex<HashMap<ToolCallId, HandoverInfo>>,
+    /// MCP elicitation forms waiting for the owner (see `elicitation.rs`).
+    pub elicitations: Mutex<HashMap<ToolCallId, crate::elicitation::ElicitationInfo>>,
     pub grants: Mutex<Grants>,
     /// Per-site / per-app permission rules of every bot (see `site_profiles`).
     pub profile_rules: Mutex<Vec<(BotId, permission_engine::ProfileRule)>>,
@@ -2362,6 +2374,8 @@ impl Shared {
                 todos: Vec::new(),
                 secret_requests: 0,
                 handovers: 0,
+                elicitations: 0,
+                elicited: None,
             }),
             taint: Mutex::new(taint),
             control_grants: Mutex::new(Vec::new()),
@@ -2932,6 +2946,7 @@ pub(crate) fn needs_barrier(event: &Event) -> bool {
             | Event::QuestionAsked(_)
             | Event::SecretRequested(_)
             | Event::HandoverRequested(_)
+            | Event::ElicitationRequested(_)
             | Event::ControlRequested(_)
             | Event::SubagentStarted(_)
             | Event::SubagentFinished(_)

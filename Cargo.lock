@@ -5072,6 +5072,7 @@ dependencies = [
  "permission-engine",
  "process-wrap",
  "proptest",
+ "protocol",
  "reqwest 0.13.5",
  "rmcp",
  "secret-store",

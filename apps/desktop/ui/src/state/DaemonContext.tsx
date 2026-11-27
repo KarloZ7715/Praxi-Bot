@@ -18,6 +18,7 @@ import { isMockMode, MOCK_BASE_URL } from "../api/mockMode";
 import type {
   Bot,
   Chat,
+  ElicitationOutcome,
   GlobalEnvelope,
   Health,
   HostLinkInfo,
@@ -51,6 +52,7 @@ import {
   EMPTY_EVENTS,
   type EventsState,
   markAnswered,
+  recordElicitationOutcome,
   recordHandoverOutcome,
   recordSecretOutcome,
   type NeedsYouEntry,
@@ -97,6 +99,12 @@ type Action =
       outcome: "done" | "cancelled";
     }
   | {
+      type: "elicitationAnswered";
+      runId: string;
+      callId: string;
+      outcome: ElicitationOutcome;
+    }
+  | {
       type: "secretAnswered";
       runId: string;
       callId: string;
@@ -122,6 +130,8 @@ function reducer(state: EventsState, action: Action): EventsState {
       return markAnswered(state, action.runId, action.callId, action.answer);
     case "handoverAnswered":
       return recordHandoverOutcome(state, action.runId, action.callId, action.outcome);
+    case "elicitationAnswered":
+      return recordElicitationOutcome(state, action.runId, action.callId, action.outcome);
     case "secretAnswered":
       return recordSecretOutcome(
         state,
@@ -169,6 +179,8 @@ export interface DaemonContextValue {
   ) => void;
   /** A hand-over card was answered or cancelled (no code is passed). */
   recordHandoverOutcome: (runId: string, callId: string, outcome: "done" | "cancelled") => void;
+  /** An MCP server's form was answered, declined or cancelled (the answer is not passed). */
+  recordElicitationOutcome: (runId: string, callId: string, outcome: ElicitationOutcome) => void;
   retry: () => void;
   /**
    * Stop and start the service the app owns again. `safe` true = safe mode, false = normal start,
@@ -269,6 +281,7 @@ type DaemonData = Pick<
   | "recordAnswer"
   | "recordSecretOutcome"
   | "recordHandoverOutcome"
+  | "recordElicitationOutcome"
   | "onDaemonEvent"
 >;
 
@@ -562,6 +575,11 @@ function useDaemonData(conn: Connection | null, computerId: string, protocol?: H
       dispatch({ type: "handoverAnswered", runId, callId, outcome }),
     []
   );
+  const recordElicitationOutcomeCb = useCallback(
+    (runId: string, callId: string, outcome: ElicitationOutcome) =>
+      dispatch({ type: "elicitationAnswered", runId, callId, outcome }),
+    []
+  );
   // A credential request stops being pinned the moment its card locks: wake up at the next expiry.
   const [expiryTick, setExpiryTick] = useState(0);
   useEffect(() => {
@@ -569,7 +587,7 @@ function useDaemonData(conn: Connection | null, computerId: string, protocol?: H
     let next = Infinity;
     for (const run of Object.values(events.runs)) {
       for (const i of run.items) {
-        if ((i.kind === "secret" || i.kind === "handover") && i.outcome === undefined && !i.closed && i.expiresMs > now) {
+        if ((i.kind === "secret" || i.kind === "handover" || i.kind === "elicitation") && i.outcome === undefined && !i.closed && i.expiresMs > now) {
           next = Math.min(next, i.expiresMs);
         }
       }
@@ -599,6 +617,7 @@ function useDaemonData(conn: Connection | null, computerId: string, protocol?: H
     recordAnswer,
     recordSecretOutcome: recordSecretOutcomeCb,
     recordHandoverOutcome: recordHandoverOutcomeCb,
+    recordElicitationOutcome: recordElicitationOutcomeCb,
     onDaemonEvent
   };
 }

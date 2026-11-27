@@ -2368,7 +2368,10 @@ impl TurnExecutor {
         for ((call, call_uuid), (text, mut is_error, duration_ms, own_spill, fact)) in
             calls.iter().zip(uuids).zip(outcomes)
         {
-            let mut text = self.sh.redact(text);
+            let text = self.sh.redact(text);
+            // What the owner typed into a server's form is for that server only: when it echoes
+            // the value back in the result, the model reads the mask instead.
+            let mut text = crate::shared::Shared::redact_elicited(&ctx, text);
             let knowledge_request = knowledge_requests.get(&call_uuid);
             if !is_error && let Some(request) = knowledge_request {
                 text = crate::knowledge::rebudget_text(&text, request);

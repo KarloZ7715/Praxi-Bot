@@ -1551,6 +1551,7 @@ pub fn serve(
         });
         step("mcp host ready, server connections start in background");
         if let Some(mcp) = &mcp {
+            mcp.set_elicitor(agent.elicitor());
             state.set_mcp(Arc::clone(mcp) as Arc<dyn McpControl>);
         }
         state.set_components(crate::components_host::ComponentHost::system());

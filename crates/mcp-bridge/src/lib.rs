@@ -53,6 +53,7 @@ mod config;
 mod diagnostics;
 mod discovery;
 mod error;
+mod form;
 mod manager;
 pub mod mcpb;
 pub mod oauth;

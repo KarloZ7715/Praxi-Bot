@@ -27,6 +27,7 @@ permission-engine = { path = "../permission-engine", version = "0.1.0" }
 # (`process_group(0)`, kill the group). Windows: a job object with
 # `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so npx/uvx wrapper trees die.
 process-wrap = { version = "10.0.1", features = ["tokio1"] }
+protocol.workspace = true
 # The OAuth policy client (`oauth_net.rs`): the same reqwest and TLS stack
 # rmcp already uses (native-tls, no aws-lc), with proxies disabled.
 reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
@@ -62,6 +63,8 @@ zeroize = "1"
 agent-router = { path = "../agent-router", version = "0.1.0" }
 rmcp = { version = "3.9", default-features = false, features = [
     "client",
+    # `Peer::create_elicitation` for the test server's `elicit` tool.
+    "elicitation",
     "server",
     "transport-io",
 ] }

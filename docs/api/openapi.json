@@ -9166,6 +9166,142 @@
         ]
       }
     },
+    "/v1/elicitations/{call_id}": {
+      "post": {
+        "tags": [
+          "elicitations"
+        ],
+        "summary": "Answer an MCP server's form: `accept` with the values, or `decline`.",
+        "operationId": "answer_elicitation",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "description": "Id from the elicitation_requested event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerElicitation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElicitationOutcome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "the answer does not fit the form; it keeps waiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "not the local owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "code elicitation_gone: not waiting any more",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/elicitations/{call_id}/cancel": {
+      "post": {
+        "tags": [
+          "elicitations"
+        ],
+        "summary": "Dismiss an MCP server's form: the server learns `cancel`.",
+        "operationId": "cancel_elicitation",
+        "parameters": [
+          {
+            "name": "call_id",
+            "in": "path",
+            "description": "Id from the elicitation_requested event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElicitationOutcome"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "not the local owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "code elicitation_gone: not waiting any more",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/v1/email/accounts": {
       "get": {
         "tags": [
@@ -22390,6 +22526,22 @@
           }
         }
       },
+      "AnswerElicitation": {
+        "type": "object",
+        "description": "Body of `POST /v1/elicitations/{call_id}`.",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ElicitationAction"
+          },
+          "content": {
+            "type": "object",
+            "description": "Field name to value (`accept` only). Write-only: no route returns it."
+          }
+        }
+      },
       "AnswerQuestion": {
         "type": "object",
         "description": "`POST /v1/questions/{call_id}`.",
@@ -26788,6 +26940,33 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          }
+        }
+      },
+      "ElicitationAction": {
+        "type": "string",
+        "description": "What the owner does with the form.",
+        "enum": [
+          "accept",
+          "decline"
+        ]
+      },
+      "ElicitationOutcome": {
+        "type": "object",
+        "description": "How a form ended. Never carries an answer.",
+        "required": [
+          "call_id",
+          "outcome"
+        ],
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The form that was answered."
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`accepted`, `declined` or `cancelled`."
           }
         }
       },

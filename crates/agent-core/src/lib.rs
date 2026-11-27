@@ -26,6 +26,7 @@ pub mod decider;
 mod delegation;
 mod discovery;
 mod discovery_prompt;
+mod elicitation;
 mod embedding;
 mod exec;
 mod full_autonomy;
@@ -127,6 +128,7 @@ pub use config::{
     full_access_lane_switch, secret_variants,
 };
 pub use control::{ControlGate, ControlRequest};
+pub use elicitation::ElicitationRefusal;
 pub use knowledge::{
     HeuristicKnowledgeDecider, KnowledgeDecider, knowledge_auto_retrieval_available,
 };
