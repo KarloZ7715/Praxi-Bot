@@ -2322,6 +2322,8 @@ fn schedule_dto(sc: &Schedule, has_webhook: bool) -> ScheduleDto {
         missed_occurrences: sc.missed_occurrences,
         moved_to: None,
         next_runs_ms: Vec::new(),
+        standing_runs_today: None,
+        standing_max_runs_per_day: None,
     }
 }
 
@@ -2349,6 +2351,16 @@ fn dto_of(s: &AppState, sc: &Schedule) -> Result<ScheduleDto, ApiError> {
     }
     if let Some(value) = &mut dto.precheck {
         redact_schedule_value(s, value);
+    }
+    if let scheduler::Payload::StandingOrder {
+        max_runs_per_day, ..
+    } = &sc.payload
+    {
+        dto.standing_max_runs_per_day = Some(*max_runs_per_day);
+        let now = storage::now_ms();
+        if let Ok(day) = sc.payload.day_key(now) {
+            dto.standing_runs_today = store.standing_order_runs(sc.id, &day).ok();
+        }
     }
     Ok(dto)
 }
@@ -2902,13 +2914,18 @@ pub(crate) async fn delete_schedule(
 pub(crate) async fn run_schedule_now(
     State(s): State<AppState>,
     Path(sid): Path<String>,
+    peer: Option<axum::Extension<crate::peer::PeerIdentity>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<(StatusCode, Json<AcceptedResponse>), ApiError> {
     let sc = schedule_of_user(&s, &sid)?;
     if s.schedule_store()?.frozen_for(sc.id)?.is_some() {
         return Err(scheduler::SchedulerError::Frozen(sc.id.to_string()).into());
     }
+    let bypass_standing_hours =
+        author_of_caller(&s, peer.as_deref(), &headers) == scheduler::ScheduleAuthor::Owner;
     let scheduler = s.scheduler()?;
-    s.leader().with_active(|| scheduler.run_now(sc.id))??;
+    s.leader()
+        .with_active(|| scheduler.run_now(sc.id, bypass_standing_hours))??;
     Ok((
         StatusCode::ACCEPTED,
         Json(AcceptedResponse {
@@ -3025,6 +3042,8 @@ pub(crate) async fn list_schedule_history(
     Path(sid): Path<String>,
 ) -> Result<Json<Vec<ScheduleHistoryEntryDto>>, ApiError> {
     let sc = schedule_of_user(&s, &sid)?;
+    let standing = matches!(sc.payload, scheduler::Payload::StandingOrder { .. });
+    let storage = s.storage();
     let occurrences = s.schedule_store()?.list_occurrences(sc.id, 100)?;
     let mut runs_by_id: std::collections::HashMap<Uuid, storage::Run> = s
         .storage()
@@ -3094,6 +3113,12 @@ pub(crate) async fn list_schedule_history(
             matches!(r.state.as_str(), "succeeded" | "failed" | "cancelled")
                 .then_some(r.updated_at_ms)
         });
+        let standing_verdict = standing
+            .then(|| {
+                run.as_ref()
+                    .and_then(|r| crate::schedule::standing_verdict_of_run(storage, r))
+            })
+            .flatten();
         entries.push(ScheduleHistoryEntryDto {
             due_ms: Some(occ.due_ms),
             run_id,
@@ -3105,11 +3130,15 @@ pub(crate) async fn list_schedule_history(
                 .and_then(|r| r.error)
                 .or(s.schedule_store()?.occurrence_note(sc.id, occ.due_ms)?),
             retryable,
+            standing_verdict,
         });
     }
     for (_, r) in runs_by_id {
         let finished_at_ms = matches!(r.state.as_str(), "succeeded" | "failed" | "cancelled")
             .then_some(r.updated_at_ms);
+        let standing_verdict = standing
+            .then(|| crate::schedule::standing_verdict_of_run(storage, &r))
+            .flatten();
         entries.push(ScheduleHistoryEntryDto {
             due_ms: None,
             run_id: Some(r.id.0),
@@ -3119,6 +3148,7 @@ pub(crate) async fn list_schedule_history(
             finished_at_ms,
             error: r.error,
             retryable: false,
+            standing_verdict,
         });
     }
     entries.sort_by(|a, b| {

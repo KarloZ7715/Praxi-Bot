@@ -417,7 +417,7 @@ async fn a_firing_outside_the_hours_or_over_the_cap_starts_nothing() {
     let fire = |at| {
         let (store, exec, s) = (&store, &exec, &s);
         async move {
-            crate::engine::execute_checked(store, exec.as_ref(), s, None, at)
+            crate::engine::execute_checked(store, exec.as_ref(), s, None, at, false)
                 .await
                 .unwrap()
         }
@@ -453,9 +453,10 @@ async fn other_payloads_are_not_gated() {
     .unwrap();
     store.insert(&s).unwrap();
     for _ in 0..30 {
-        let out = crate::engine::execute_checked(&store, exec.as_ref(), &s, None, utc_ms(3, 0))
-            .await
-            .unwrap();
+        let out =
+            crate::engine::execute_checked(&store, exec.as_ref(), &s, None, utc_ms(3, 0), false)
+                .await
+                .unwrap();
         assert_eq!(out, crate::engine::Dispatch::Ran);
     }
 }
@@ -698,7 +699,7 @@ async fn a_gated_firing_leaves_the_precheck_state_alone() {
         input: json!({}),
     });
     store.insert(&s).unwrap();
-    let go = |at| crate::engine::execute_checked(&store, &exec, &s, None, at);
+    let go = |at| crate::engine::execute_checked(&store, &exec, &s, None, at, false);
 
     // Night: no check ran, no hash moved, nothing was counted as skipped by the check.
     assert_eq!(go(utc_ms(3, 0)).await.unwrap(), Skipped);
@@ -879,7 +880,7 @@ async fn a_start_that_never_began_gives_its_slot_back() {
     let store = ScheduleStore::open_in_memory().unwrap();
     let s = stored(&store, order(None, 2));
     let exec = Offline(Mutex::new(true));
-    let go = || crate::engine::execute_checked(&store, &exec, &s, None, utc_ms(9, 0));
+    let go = || crate::engine::execute_checked(&store, &exec, &s, None, utc_ms(9, 0), false);
     // Offline for as long as it likes: no slot is burned.
     for _ in 0..5 {
         assert!(go().await.is_err());
@@ -904,7 +905,7 @@ impl ScheduleExecutor for Broken {
 async fn a_run_that_began_and_failed_keeps_its_slot() {
     let store = ScheduleStore::open_in_memory().unwrap();
     let s = stored(&store, order(None, 2));
-    let go = || crate::engine::execute_checked(&store, &Broken, &s, None, utc_ms(9, 0));
+    let go = || crate::engine::execute_checked(&store, &Broken, &s, None, utc_ms(9, 0), false);
     assert!(go().await.is_err());
     assert_eq!(store.standing_order_runs(s.id, "2026-06-10").unwrap(), 1);
 }
@@ -916,7 +917,7 @@ async fn a_stale_definition_takes_no_slot_even_when_it_wins_the_race_to_launch()
     let s = stored(&store, order(None, 2));
     // The owner disables it while the firing is in flight.
     store.set_enabled(s.id, false, None).unwrap();
-    let out = crate::engine::execute_checked(&store, &exec, &s, None, utc_ms(9, 0))
+    let out = crate::engine::execute_checked(&store, &exec, &s, None, utc_ms(9, 0), false)
         .await
         .unwrap();
     assert_eq!(out, crate::engine::Dispatch::Skipped);
@@ -955,5 +956,68 @@ async fn a_gated_timer_occurrence_is_not_recorded_as_a_success() {
         .unwrap();
     assert_ne!(states.len(), 0);
     assert!(states.iter().all(|st| st == "missed"), "{states:?}");
+    scheduler.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_webhook_does_not_bypass_standing_active_hours() {
+    let store = Arc::new(ScheduleStore::open_in_memory().unwrap());
+    let exec = Arc::new(Counting::default());
+    let clock = Arc::new(FakeClock::new(utc_ms(3, 0)));
+    let mut s = Schedule::new(
+        BotId::new(),
+        None,
+        "hook",
+        ScheduleSpec::Every { seconds: 3600 },
+        order(Some(hours("08:00", "22:00", "UTC")), 5),
+        MisfirePolicy::Skip,
+        0,
+    )
+    .unwrap();
+    s.author = ScheduleAuthor::Owner;
+    let id = s.id;
+    store.insert(&s).unwrap();
+    store
+        .set_trigger(id, &Trigger::Webhook { secret: "k".into() })
+        .unwrap();
+    let scheduler = Scheduler::start_with_clock(store.clone(), exec.clone(), clock.clone());
+    let sig = crate::sign_webhook_body("k", b"go");
+    scheduler.trigger_webhook(id, "go", &sig).unwrap();
+    scheduler.settle().await;
+    assert_eq!(*exec.0.lock(), 0);
+    scheduler.shutdown().await;
+}
+
+#[tokio::test]
+async fn run_now_bypasses_hours_only_when_asked_and_the_daily_cap_always_holds() {
+    let store = Arc::new(ScheduleStore::open_in_memory().unwrap());
+    let exec = Arc::new(Counting::default());
+    let clock = Arc::new(FakeClock::new(utc_ms(3, 0)));
+    let mut s = Schedule::new(
+        BotId::new(),
+        None,
+        "now",
+        ScheduleSpec::Every { seconds: 3600 },
+        order(Some(hours("08:00", "22:00", "UTC")), 1),
+        MisfirePolicy::Skip,
+        0,
+    )
+    .unwrap();
+    s.author = ScheduleAuthor::Owner;
+    store.insert(&s).unwrap();
+    let id = s.id;
+    let scheduler = Scheduler::start_with_clock(store.clone(), exec.clone(), clock.clone());
+    // Non-owner-style run-now: outside active hours, nothing runs.
+    scheduler.run_now(id, false).unwrap();
+    scheduler.settle().await;
+    assert_eq!(*exec.0.lock(), 0);
+    // Owner run-now at night: runs once.
+    scheduler.run_now(id, true).unwrap();
+    scheduler.settle().await;
+    assert_eq!(*exec.0.lock(), 1);
+    // Cap still applies even when bypassing hours.
+    scheduler.run_now(id, true).unwrap();
+    scheduler.settle().await;
+    assert_eq!(*exec.0.lock(), 1);
     scheduler.shutdown().await;
 }
