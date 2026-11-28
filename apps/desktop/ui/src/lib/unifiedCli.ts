@@ -134,13 +134,28 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * already says it all.
  */
 export function placeLabel(t: Translate, row: UnifiedCliRow, serverName: string, showServer: boolean): string {
+  const detected = row.local?.detected;
+  // A ready CLI whose sign-in was only seen in its own files (Copilot, Antigravity): the app has not
+  // checked it with the provider, so the row says so.
+  const credentialSeen =
+    row.localDetail === "ready" &&
+    (row.id === "copilot" || row.id === "agy") &&
+    detected?.auth === "unknown" &&
+    detected.detail === "auth_metadata_only";
   const reason =
     row.localPlace === "off" && row.localDetail !== "ready" && row.localDetail !== "na"
       ? ` (${t(`settingsModal.ai.detected.status.${STATUS_I18N[row.localDetail]}`)})`
-      : "";
+      : credentialSeen
+        ? ` (${t("serverConnectionStatus.credentialFound")})`
+        : "";
   const parts = [`${t("settingsUi.codingClis.thisComputer")} ${t(`settingsUi.codingClis.local.${row.localPlace}`)}${reason}`];
   if (showServer) {
-    parts.push(`${t("settingsUi.codingClis.myServer", { name: serverName })} ${t(`settingsUi.codingClis.server.${row.serverPlace}`)}`);
+    // A sign-in file on the server that the app could not check with the provider: say what was seen.
+    const serverState =
+      row.serverPlace === "unknown" && row.server?.credential_file_present
+        ? t("serverConnectionStatus.credentialFound")
+        : t(`settingsUi.codingClis.server.${row.serverPlace}`);
+    parts.push(`${t("settingsUi.codingClis.myServer", { name: serverName })} ${serverState}`);
   }
   return parts.join(" · ");
 }
