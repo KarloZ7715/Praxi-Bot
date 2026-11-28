@@ -17,6 +17,14 @@ import styles from "./MailGuardCard.module.css";
 const LOG_ROWS = 100;
 const K = "settingsModal.mailGuard";
 
+// The daemon refuses more than these (see `GuardSettings::validate`), and fills these in when a
+// field is missing from the saved settings.
+const MAX_COUNT = 100000;
+const MAX_SAME_RECIPIENT_DAYS = 3650;
+const MAX_WARMUP_DAYS = 365;
+const DEFAULT_BUDGET = 20;
+const DEFAULT_WARMUP_DAYS = 14;
+
 /** "Safe sending": the limits, the opt-out list and the log of every mail the bots sent. */
 export function MailGuardCard() {
   const { t, i18n } = useTranslation();
@@ -75,7 +83,7 @@ export function MailGuardCard() {
     }
   };
 
-  const number = (v: string) => Math.max(0, Math.min(100000, Number.parseInt(v, 10) || 0));
+  const number = (v: string, max = MAX_COUNT) => Math.max(0, Math.min(max, Number.parseInt(v, 10) || 0));
 
   const note = (problem: HumanError | null, testId: string) =>
     problem ? (
@@ -92,6 +100,8 @@ export function MailGuardCard() {
     settings && saved
       ? settings.daily_limit !== saved.daily_limit ||
         settings.same_recipient_days !== saved.same_recipient_days ||
+        (settings.outreach_daily_budget ?? DEFAULT_BUDGET) !== (saved.outreach_daily_budget ?? DEFAULT_BUDGET) ||
+        (settings.outreach_warmup_days ?? DEFAULT_WARMUP_DAYS) !== (saved.outreach_warmup_days ?? DEFAULT_WARMUP_DAYS) ||
         settings.opt_out_line !== saved.opt_out_line ||
         settings.footer !== saved.footer ||
         domains !== (saved.verification_link_domains ?? []).join("\n")
@@ -161,6 +171,7 @@ export function MailGuardCard() {
                 type="number"
                 min={0}
                 value={settings.daily_limit}
+                max={MAX_COUNT}
                 onChange={(e) => setSettings({ ...settings, daily_limit: number(e.target.value) })}
               />
             </FormField>
@@ -177,7 +188,48 @@ export function MailGuardCard() {
                 type="number"
                 min={0}
                 value={settings.same_recipient_days}
-                onChange={(e) => setSettings({ ...settings, same_recipient_days: number(e.target.value) })}
+                max={MAX_SAME_RECIPIENT_DAYS}
+                onChange={(e) => setSettings({ ...settings, same_recipient_days: number(e.target.value, MAX_SAME_RECIPIENT_DAYS) })}
+              />
+            </FormField>
+          </div>
+          <h3 id="mail-guard-budget" className={styles.sectionTitle}>
+            {t(`${K}.budgetTitle`)}
+          </h3>
+          <p className={formStyles.hint}>{t(`${K}.budgetHint`)}</p>
+          <div className={styles.limitRow}>
+            <FormField
+              id="mg-budget"
+              label={t(`${K}.budget`)}
+              helpTitle={t(`${K}.budget`)}
+              helpBody={t(`${K}.budgetHelp`)}
+              width="sm"
+            >
+              <input
+                id="mg-budget"
+                className={formStyles.input}
+                type="number"
+                min={0}
+                value={settings.outreach_daily_budget ?? DEFAULT_BUDGET}
+                max={MAX_COUNT}
+                onChange={(e) => setSettings({ ...settings, outreach_daily_budget: number(e.target.value) })}
+              />
+            </FormField>
+            <FormField
+              id="mg-warmup"
+              label={t(`${K}.warmup`)}
+              helpTitle={t(`${K}.warmup`)}
+              helpBody={t(`${K}.warmupHelp`)}
+              width="sm"
+            >
+              <input
+                id="mg-warmup"
+                className={formStyles.input}
+                type="number"
+                min={0}
+                value={settings.outreach_warmup_days ?? DEFAULT_WARMUP_DAYS}
+                max={MAX_WARMUP_DAYS}
+                onChange={(e) => setSettings({ ...settings, outreach_warmup_days: number(e.target.value, MAX_WARMUP_DAYS) })}
               />
             </FormField>
           </div>
@@ -277,6 +329,11 @@ export function MailGuardCard() {
                   <span className={formStyles.hint}>
                     {t(o.kind === "domain" ? `${K}.kindDomain` : `${K}.kindAddress`)}
                   </span>{" "}
+                  {o.reason === "hard_bounce" || o.reason === "stop_reply" ? (
+                    <span className={formStyles.hint} data-testid="mail-guard-optout-reason">
+                      ({t(o.reason === "hard_bounce" ? `${K}.reasonHardBounce` : `${K}.reasonStopReply`)})
+                    </span>
+                  ) : null}{" "}
                   <Button
                     size="sm"
                     variant="ghost"

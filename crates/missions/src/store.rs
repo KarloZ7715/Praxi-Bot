@@ -39,6 +39,14 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "0004_sent_chars",
         include_str!("../migrations/0004_sent_chars.sql"),
     ),
+    (
+        "0005_wait_deferral",
+        include_str!("../migrations/0005_wait_deferral.sql"),
+    ),
+    (
+        "0006_wait_deferred_ids",
+        include_str!("../migrations/0006_wait_deferred_ids.sql"),
+    ),
 ];
 
 mod waits;
