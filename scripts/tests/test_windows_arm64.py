@@ -1,4 +1,4 @@
-"""ARM64 architecture checks and the experimental CI/release boundary (#177)."""
+"""ARM64 executable checks, installer smoke and CI policy."""
 
 import importlib.util
 import os
@@ -105,6 +105,11 @@ class ArmWorkflowPolicy(unittest.TestCase):
         self.assertIn("name: praxi-bot-windows-arm64-installer", self.workflow)
         self.assertIn("runs-on: windows-11-arm", self.workflow)
 
+    def test_a_failed_smoke_keeps_the_installer_and_rust_cache(self):
+        upload = self.workflow.split("- name: Upload ARM64 installer\n", 1)[1]
+        self.assertIn("if: inputs.bundle && !cancelled() && steps.bundle.outcome == 'success'", upload)
+        self.assertIn("cache-on-failure: true", self.workflow)
+
 
 @unittest.skipUnless(shutil.which("pwsh"), "PowerShell is needed for the simulated installer")
 class InstallerSmoke(unittest.TestCase):
@@ -118,12 +123,13 @@ class InstallerSmoke(unittest.TestCase):
             sidecars = root / "apps/desktop/binaries"
             sidecars.mkdir(parents=True)
             (sidecars / f"bot-{target}.exe").write_bytes(executable())
-            (root / "target" / target / "release/bot-desktop.exe").write_bytes(executable())
+            marker = b"" if fault == "missing-marker" else b"__TAURI_BUNDLE_TYPE_VAR_UNK"
+            (root / "target" / target / "release/bot-desktop.exe").write_bytes(executable() + marker)
             scripts = root / "scripts/installer"
             scripts.mkdir(parents=True)
             shutil.copy(CHECK, scripts)
             script = (ROOT / "scripts/installer/smoke-arm64.ps1").read_text(encoding="utf-8")
-            # Replace only execution of the synthetic daemon. PE checks and hashes run for real.
+            # The fixture has a PE header but no executable code.
             script = script.replace("$version = & $daemon --version",
                                     "$version = 'fixture'; $global:LASTEXITCODE = 0")
             (root / "smoke.ps1").write_text(script, encoding="utf-8")
@@ -147,6 +153,10 @@ function Start-Process {
         New-Item -ItemType Directory -Path $dest | Out-Null
         Copy-Item apps/desktop/binaries/bot-aarch64-pc-windows-msvc.exe (Join-Path $dest 'bot.exe')
         Copy-Item target/aarch64-pc-windows-msvc/release/bot-desktop.exe $dest
+        $desktop = Join-Path $dest 'bot-desktop.exe'
+        $bytes = [IO.File]::ReadAllBytes($desktop)
+        $bytes[-3] = 0x4e; $bytes[-2] = 0x53; $bytes[-1] = 0x53
+        [IO.File]::WriteAllBytes($desktop, $bytes)
         Set-Content -LiteralPath (Join-Path $dest 'uninstall.exe') -Value 'fixture'
         if ($env:SMOKE_FAULT -eq 'wrong-arch') {
             $path = Join-Path $dest 'bot-desktop.exe'
@@ -184,6 +194,12 @@ if ($global:installed.Count -ne 2) { throw 'Expected both installation modes' }
         result = self.run_smoke()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(result.stdout.count("UNINSTALL"), 2)
+
+    def test_missing_bundle_marker_is_rejected_before_install(self):
+        result = self.run_smoke("missing-marker")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Tauri bundle type marker missing", result.stderr)
+        self.assertNotIn("UNINSTALL", result.stdout)
 
     def test_installed_architecture_hashes_and_removal_fail_closed(self):
         for fault, message in (("wrong-arch", "Wrong installed architecture"),

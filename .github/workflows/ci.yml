@@ -573,7 +573,7 @@ jobs:
           path: ${{ runner.temp }}/desktop-smoke/
           retention-days: 7
 
-  # Experimental per #177: a failure stays visible but is outside ci-result until stable.
+  # Keep ARM64 outside ci-result until the runner is stable (#177).
   windows-arm64:
     name: Windows ARM64 (experimental)
     needs: changes

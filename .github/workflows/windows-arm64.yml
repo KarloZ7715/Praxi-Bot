@@ -1,7 +1,5 @@
 name: Windows ARM64
 
-# Reused by CI (debug build/tests) and Windows Installer (NSIS artifact).
-# Experimental per #177: callers must keep this out of the required ci-result gate.
 on:
   workflow_call:
     inputs:
@@ -59,6 +57,7 @@ jobs:
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: windows-arm64-${{ inputs.bundle && 'nsis' || 'tests' }}
+          cache-on-failure: true
 
       - name: Build frontend
         run: |
@@ -89,8 +88,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ARM64 release daemon build failed" }
           Copy-Item -LiteralPath "target/$env:ARM_TARGET/release/bot.exe" "apps/desktop/binaries/bot-$env:ARM_TARGET.exe" -Force
 
-      # No signing secrets, update feed, attestations or release upload in this lane.
       - name: Build ARM64 NSIS installer
+        id: bundle
         if: inputs.bundle
         run: pnpm build:desktop --target $env:ARM_TARGET --bundles nsis
 
@@ -99,7 +98,7 @@ jobs:
         run: ./scripts/installer/smoke-arm64.ps1
 
       - name: Upload ARM64 installer
-        if: inputs.bundle
+        if: inputs.bundle && !cancelled() && steps.bundle.outcome == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: praxi-bot-windows-arm64-installer

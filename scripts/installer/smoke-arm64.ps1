@@ -1,4 +1,3 @@
-# Run on the disposable Windows ARM64 runner, from the repository root.
 $ErrorActionPreference = 'Stop'
 $target = 'aarch64-pc-windows-msvc'
 $bundle = "target/$target/release/bundle/nsis"
@@ -8,6 +7,15 @@ $installer = $installers[0].FullName
 $builtDaemon = "apps/desktop/binaries/bot-$target.exe"
 python scripts/installer/check_windows_arch.py --arch arm64 $builtDaemon "target/$target/release/bot-desktop.exe"
 if ($LASTEXITCODE -ne 0) { throw 'Wrong build architecture' }
+
+# Tauri restores the build output after patching the installer's bundle type marker.
+$desktopBytes = [IO.File]::ReadAllBytes("target/$target/release/bot-desktop.exe")
+$marker = '__TAURI_BUNDLE_TYPE_VAR_UNK'
+$markerOffset = [Text.Encoding]::Latin1.GetString($desktopBytes).IndexOf($marker, [StringComparison]::Ordinal)
+if ($markerOffset -lt 0) { throw 'Tauri bundle type marker missing from desktop build' }
+$nsisMarker = [Text.Encoding]::ASCII.GetBytes('__TAURI_BUNDLE_TYPE_VAR_NSS')
+$nsisMarker.CopyTo($desktopBytes, $markerOffset)
+$expectedDesktopHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($desktopBytes))
 
 if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP) -or $env:RUNNER_ARCH -ne 'ARM64') {
     throw 'This smoke test needs a disposable ARM64 runner'
@@ -36,8 +44,8 @@ foreach ($allUsers in @($false, $true)) {
         if ((Get-FileHash -LiteralPath $daemon).Hash -ne (Get-FileHash -LiteralPath $builtDaemon).Hash) {
             throw 'Installed daemon differs from the staged sidecar'
         }
-        if ((Get-FileHash -LiteralPath $desktop).Hash -ne (Get-FileHash -LiteralPath "target/$target/release/bot-desktop.exe").Hash) {
-            throw 'Installed desktop differs from the built desktop'
+        if ((Get-FileHash -LiteralPath $desktop).Hash -ne $expectedDesktopHash) {
+            throw 'Installed desktop differs from the expected NSIS desktop'
         }
         $version = & $daemon --version
         if ($LASTEXITCODE -ne 0 -or -not $version) { throw 'Installed daemon --version failed' }

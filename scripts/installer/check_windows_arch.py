@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the PE machine field of Windows executables before packaging or running them."""
+"""Check Windows executable architecture from the PE header."""
 
 import argparse
 from pathlib import Path

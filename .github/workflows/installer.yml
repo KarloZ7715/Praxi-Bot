@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Experimental per #177. Artifact only; the x64 release jobs do not depend on this job.
+  # Keep the x64 release jobs independent of this experimental ARM64 build (#177).
   windows-arm64:
     name: ARM64 NSIS (experimental)
     permissions:
