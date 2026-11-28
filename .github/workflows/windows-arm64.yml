@@ -1,0 +1,108 @@
+name: Windows ARM64
+
+# Reused by CI (debug build/tests) and Windows Installer (NSIS artifact).
+# Experimental per #177: callers must keep this out of the required ci-result gate.
+on:
+  workflow_call:
+    inputs:
+      bundle:
+        description: Build and smoke-test an NSIS artifact after the tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  arm64:
+    name: Windows ARM64 (${{ inputs.bundle && 'NSIS' || 'tests' }})
+    runs-on: windows-11-arm
+    timeout-minutes: 90
+    env:
+      ARM_TARGET: aarch64-pc-windows-msvc
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install native Rust toolchain
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable (2026-11-15)
+        with:
+          toolchain: stable-aarch64-pc-windows-msvc
+          components: clippy
+
+      - name: Verify native host
+        run: |
+          if ($env:RUNNER_ARCH -ne 'ARM64') { throw "Expected an ARM64 runner" }
+          $hostLine = rustc -Vv | Select-String '^host: aarch64-pc-windows-msvc$'
+          if ($LASTEXITCODE -ne 0 -or -not $hostLine) { throw "Expected native ARM64 Rust" }
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          architecture: arm64
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 12
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: windows-arm64-${{ inputs.bundle && 'nsis' || 'tests' }}
+
+      - name: Build frontend
+        run: |
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw "pnpm install failed" }
+          pnpm --dir apps/desktop/ui build
+          if ($LASTEXITCODE -ne 0) { throw "UI build failed" }
+
+      - name: Build and stage debug sidecar
+        run: |
+          cargo build --locked -p cli --target $env:ARM_TARGET
+          if ($LASTEXITCODE -ne 0) { throw "ARM64 daemon build failed" }
+          python scripts/installer/check_windows_arch.py --arch arm64 "target/$env:ARM_TARGET/debug/bot.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Wrong daemon architecture" }
+          New-Item -ItemType Directory -Force apps/desktop/binaries | Out-Null
+          Copy-Item -LiteralPath "target/$env:ARM_TARGET/debug/bot.exe" "apps/desktop/binaries/bot-$env:ARM_TARGET.exe" -Force
+
+      - name: Test CLI and desktop natively
+        run: cargo test --locked -p cli -p desktop --target $env:ARM_TARGET
+
+      - name: Clippy for CLI and desktop
+        run: cargo clippy --locked -p cli -p desktop --all-targets --target $env:ARM_TARGET -- -D warnings
+
+      - name: Build and stage release sidecar
+        if: inputs.bundle
+        run: |
+          cargo build --release --locked -p cli --target $env:ARM_TARGET
+          if ($LASTEXITCODE -ne 0) { throw "ARM64 release daemon build failed" }
+          Copy-Item -LiteralPath "target/$env:ARM_TARGET/release/bot.exe" "apps/desktop/binaries/bot-$env:ARM_TARGET.exe" -Force
+
+      # No signing secrets, update feed, attestations or release upload in this lane.
+      - name: Build ARM64 NSIS installer
+        if: inputs.bundle
+        run: pnpm build:desktop --target $env:ARM_TARGET --bundles nsis
+
+      - name: Check installed ARM64 executables and removal
+        if: inputs.bundle
+        run: ./scripts/installer/smoke-arm64.ps1
+
+      - name: Upload ARM64 installer
+        if: inputs.bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: praxi-bot-windows-arm64-installer
+          path: target/aarch64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 30

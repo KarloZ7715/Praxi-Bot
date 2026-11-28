@@ -54,11 +54,15 @@ class InstallerWorkflowPolicy(unittest.TestCase):
         uses = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s*(\S+)", self.text)
         self.assertGreater(len(uses), 5)
         for action in uses:
+            if action == "./.github/workflows/windows-arm64.yml":
+                self.assertTrue((ROOT / action).is_file())
+                continue  # Local reusable workflows use the caller's commit.
             self.assertRegex(action, r"^[^@\s]+@[0-9a-f]{40}$", f"{action} is not pinned to a full commit SHA")
 
     def test_nothing_is_granted_by_default_and_every_job_asks_for_its_own(self):
         self.assertRegex(self.text, r"(?m)^permissions: \{\}$")
-        self.assertEqual(set(self.jobs), {"windows-installer", "attest", "attach-to-release"})
+        self.assertEqual(set(self.jobs), {"windows-installer", "windows-arm64", "attest", "attach-to-release"})
+        self.assertEqual(job_permissions(self.jobs["windows-arm64"]), {"contents": "read"})
         self.assertEqual(job_permissions(self.jobs["windows-installer"]), {"contents": "read"})
         self.assertEqual(
             job_permissions(self.jobs["attest"]),
@@ -67,7 +71,7 @@ class InstallerWorkflowPolicy(unittest.TestCase):
         self.assertEqual(job_permissions(self.jobs["attach-to-release"]), {"contents": "write"})
 
     def test_secrets_stay_in_the_build_job(self):
-        for name in ("attest", "attach-to-release"):
+        for name in ("windows-arm64", "attest", "attach-to-release"):
             self.assertNotIn("secrets.", self.jobs[name], name)
         self.assertIn("TAURI_SIGNING_PRIVATE_KEY", self.jobs["windows-installer"])
 

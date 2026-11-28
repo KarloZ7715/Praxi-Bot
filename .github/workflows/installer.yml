@@ -13,8 +13,10 @@ on:
       - "scripts/release/verify-windows.ps1"
       - "scripts/release/update_manifest.py"
       - "scripts/tests/test_windows_release.py"
+      - "scripts/tests/test_windows_arm64.py"
       - "scripts/tests/test_update_manifest.py"
       - ".github/workflows/installer.yml"
+      - ".github/workflows/windows-arm64.yml"
   workflow_dispatch:
   push:
     tags: ["v*"]
@@ -32,6 +34,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Experimental per #177. Artifact only; the x64 release jobs do not depend on this job.
+  windows-arm64:
+    name: ARM64 NSIS (experimental)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/windows-arm64.yml
+    with:
+      bundle: true
+
   windows-installer:
     name: Build NSIS installer (windows-latest)
     runs-on: windows-latest

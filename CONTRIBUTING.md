@@ -187,6 +187,23 @@ job names are unchanged, `Build & Test (windows-latest, tests 2/2)` is new, and
 `Real-app smoke (windows-latest)` does not appear on UI-only pull requests (`ci-result` accepts a
 skipped job, a branch rule that lists the job names itself would wait for it forever).
 
+**Windows ARM64 (experimental, #177).** CI calls `.github/workflows/windows-arm64.yml` on a native
+`windows-11-arm` runner to build and test `cli` and `desktop`, then run Clippy, with the default
+features and the explicit `aarch64-pc-windows-msvc` target. This job stays outside `ci-result`
+until its stability is established: failures remain visible without blocking other pull requests.
+The Windows Installer workflow calls the same workflow with `bundle: true` to build an NSIS
+artifact, check both executables' PE architecture, install it for the current user and for all
+users, run the installed daemon's `--version`, compare the installed binaries with the build,
+and check removal. NSIS itself runs through x86 emulation; the app and daemon must be ARM64.
+The artifact is named `praxi-bot-windows-arm64-installer`. ARM64 publishing, signing and the
+update feed are follow-up work; the x64 release jobs do not depend on the experimental job.
+
+Run the portable architecture and workflow-policy tests locally with
+`python -B -m unittest discover -s scripts/tests -p test_windows_arm64.py -v`.
+The real installer smoke (`scripts/installer/smoke-arm64.ps1`) needs a disposable ARM64 runner
+and the release build produced by the workflow. It checks silent installation and removal;
+interactive installer pages and desktop interaction still need manual testing on ARM64.
+
 **Evaluation scenarios.** Safety behaviour (approvals, the egress gate, prompt injection) is tested by
 hermetic YAML scenarios in `evals/scenarios/`, run by `cargo test -p evals` with no network and no
 real keys. When you change a gate or add a tool that reads untrusted content, add or update a
