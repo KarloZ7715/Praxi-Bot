@@ -45,6 +45,12 @@ const screens = [
   { name: 'chat-elicitation', query: 'screen=elicitation', expect: '[data-testid=elicitation-card]' },
   { name: 'schedules', query: 'screen=schedules' },
   { name: 'needs', query: 'screen=needs' },
+  { name: 'notifications', query: 'screen=notifications', expect: '[data-testid=notify-bot-group]' },
+  { name: 'notifications-empty', query: 'screen=notifications-empty', expect: '[data-testid=notify-history-empty]' },
+  { name: 'vault', query: 'screen=vault', expect: '[data-testid=vault-manager]' },
+  { name: 'bot-panel-automation', query: 'screen=bot&panel=1', expect: '[data-testid=bot-panel]', act: [{ click: '[data-testid=bot-panel-tab-automation]' }] },
+  { name: 'bot-panel-library', query: 'screen=bot&panel=1', expect: '[data-testid=bot-panel]', act: [{ click: '[data-testid=bot-panel-tab-library]' }] },
+  { name: 'bot-panel-tools', query: 'screen=bot&panel=1', expect: '[data-testid=bot-panel]', act: [{ click: '[data-testid=bot-panel-tab-tools]' }] },
   { name: 'apps', query: 'screen=apps' },
   { name: 'apps-detail', query: 'screen=apps&composio=connected', expect: '[data-testid=composio-app-gmail]', act: [{ click: '[data-testid=composio-tile-gmail] button' }] },
   { name: 'apps-rest-apis', query: 'screen=apps', expect: '[data-testid=openapi-apps]', act: [{ click: '[data-testid=apps-rest]' }] },
@@ -73,7 +79,7 @@ const screens = [
   { name: 'run-location-popover', expect: '[data-testid=home-status]', query: 'screen=home&menu=1' },
   { name: 'add-server-wizard', expect: '[data-testid=add-server-live]', query: 'screen=home&menu=1', act: [{ click: '[data-testid=computer-add]' }] },
   { name: 'add-server-choose', query: 'screen=home&menu=1', act: [{ click: '[data-testid=computer-add]' }, { click: '[data-testid=add-server-next]', optional: true }] },
-  { name: 'schedule-builder', expect: '[data-testid=schedule-sentence]', query: 'screen=schedules', act: [{ click: '[data-testid=schedules-empty-new], [data-testid=schedules-new]', optional: true }, { clickText: /new schedule/i, optional: true }] },
+  { name: 'schedule-builder', expect: '[data-testid=schedule-sentence]', query: 'screen=schedules', act: [{ click: '[data-testid=schedules-empty-new], [data-testid=schedules-new]', optional: true }, { clickText: /^(New schedule|Yeni zamanlama)/i, optional: true }] },
   {
     name: 'schedule-standing',
     height: 1280,
@@ -104,8 +110,15 @@ const screens = [
 // Two themes (one light, one dark) in English, plus two other locales (text differs, structure does not).
 const themes = ['clay', 'obsidian'];
 const cases = [];
-for (const s of screens) for (const theme of themes) cases.push({ name: `${s.name}/${theme}/en`, query: `${s.query}&theme=${theme}&lang=en`, act: s.act, expect: s.expect, scope: s.scope });
-cases.push({ name: 'home/clay/tr', query: 'screen=home&theme=clay&lang=tr' }, { name: 'settings-general/clay/de', query: 'screen=settings&section=general&theme=clay&lang=de' });
+const locales = ['en', 'tr'];
+for (const s of screens) {
+  for (const theme of themes) {
+    for (const lang of locales) {
+      cases.push({ name: `${s.name}/${theme}/${lang}`, query: `${s.query}&theme=${theme}&lang=${lang}`, act: s.act, expect: s.expect, scope: s.scope, skipRing: s.skipRing });
+    }
+  }
+}
+cases.push({ name: 'settings-general/clay/de', query: 'screen=settings&section=general&theme=clay&lang=de' });
 const filtered = only ? cases.filter((c) => c.name.includes(only)) : cases;
 const selected = pickShard(filtered, shard);
 const housekeeping = !shard || shard.total === 1;
